@@ -1,0 +1,19 @@
+{
+  "name": "ai-infrastructure",
+  "version": "1.0.0",
+  "description": "A field guide to running language models on your own hardware",
+  "license": "MIT",
+  "scripts": {
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "markdown-it-mathjax3": "^4.3.2",
+    "vitepress": "2.0.0-alpha.15"
+  },
+  "dependencies": {
+    "mermaid": "^11.16.0",
+    "vitepress-plugin-mermaid": "^2.0.17"
+  }
+}
