@@ -31,9 +31,9 @@ features:
     link: /book/10-from-one-user-to-many
     linkText: 2 chapters
   - title: Part V — Going further
-    details: Hardware beyond this book, teaching a model your own documents, and the security problems that follow.
-    link: /book/12-going-further
-    linkText: 3 chapters
+    details: Teaching a model your own documents, the security problems that follow, and where the hardware goes next.
+    link: /book/12-your-own-data
+    linkText: 4 chapters
 ---
 
 ## The short version

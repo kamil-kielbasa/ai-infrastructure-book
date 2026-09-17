@@ -24,6 +24,13 @@ you two things:
 - **A smaller model is a faster model**, in direct proportion.
 - **The speed of your memory matters more than the speed of your processor.**
 
+::: warning One exception, coming in Chapter 3
+The denominator is the part of the model actually read for each token. For ordinary
+models that is the whole thing, and the formula works as written. A second kind of model
+reads only a fraction of itself per token, and the arithmetic changes completely.
+[Chapter 3](/book/03-dense-and-sparse) deals with it.
+:::
+
 Hold on to this. It is the reason the next chapter is about memory rather than compute,
 and the reason [Chapter 11](/book/11-reference-architectures) recommends the hardware it
 does.
@@ -42,7 +49,7 @@ filling the screen exactly as fast as you can take it in.
 | Under 3 | Painful. Slower than someone talking. |
 | 5 | Keeps pace with reading. Fine for chat, tiring for anything else. |
 | 10–20 | Comfortable. Text arrives faster than you consume it. |
-| 30–60 | The range hosted assistants usually feel like. |
+| 30–60 | Roughly how a hosted assistant tends to feel, though providers publish no figures. |
 | 100+ | Beyond perception for reading. Only matters for the case below. |
 
 Above about 20 tokens per second, a human cannot tell the difference. So why chase more?
@@ -154,8 +161,12 @@ the cache at 8-bit:
 | 8B | ~64 MB | 2 GB | 8 GB | 64 GB |
 | 32B | ~128 MB | 4 GB | 16 GB | 128 GB |
 | 70B | ~160 MB | 5 GB | 21 GB | 164 GB |
+| 120B | ~220 MB | 7 GB | 28 GB | 220 GB |
 
-Approximate — architectures differ, and a model card will give you the exact shape.
+Approximate — architectures differ, and a model card will give you the exact shape. Some
+very large models use compressed attention schemes that cut these figures by a large
+factor; where the number matters to a purchase, measure it rather than trusting this
+table.
 
 Read the last column carefully. A 70B model's weights come to about 39 GB at Q4. Giving
 it a **one-million-token context costs four times more memory than the model itself.**

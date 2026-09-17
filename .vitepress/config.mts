@@ -23,9 +23,7 @@ export default withMermaid(defineConfig({
 
   // README.md is for people browsing the repo on GitHub; index.md is the site
   // landing page. Without this the README would also be published, as /README.
-  // TODO: delete book/12-what-to-learn-next.md (split into chapters 12-14) and
-  // drop it from this list.
-  srcExclude: ['README.md', 'book/12-what-to-learn-next.md'],
+  srcExclude: ['README.md'],
 
   // Chapters 2, 4, 5, 8 and 11 derive memory and throughput formulas.
   markdown: { math: true },
@@ -76,9 +74,10 @@ export default withMermaid(defineConfig({
         text: 'Part V — Going further',
         collapsed: false,
         items: [
-          { text: '12. Hardware beyond this book', link: '/book/12-going-further' },
-          { text: '13. Teaching a model your data', link: '/book/13-your-own-data' },
-          { text: '14. Security and evaluation', link: '/book/14-security-and-evaluation' }
+          { text: '12. Teaching a model your data', link: '/book/12-your-own-data' },
+          { text: '13. Security and evaluation', link: '/book/13-security-and-evaluation' },
+          { text: '14. Hardware beyond this book', link: '/book/14-going-further' },
+          { text: '15. Closing', link: '/book/15-closing' }
         ]
       }
     ],

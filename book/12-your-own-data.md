@@ -1,4 +1,4 @@
-# 13. Teaching a model your own data
+# 12. Teaching a model your own data
 
 A model knows what was in its training data and nothing else. It has never seen your
 documentation, your codebase, your tickets or your contracts. Closing that gap is the
@@ -138,8 +138,8 @@ deployment without buying anything.
 
 1. Put ten documents into Open WebUI and ask questions about them. Notice what it gets
    wrong.
-2. Write down twenty questions your colleagues actually ask, with the answers you would
-   accept. This is your test set, and it is worth more than any framework choice.
+2. Build a test set: the questions your colleagues actually ask, with the answers you
+   would accept ([Chapter 13](/book/13-security-and-evaluation#evaluation)).
 3. Build the simplest thing that could work, then measure it against that set.
 4. Add hybrid search. Measure again.
 5. Only then consider anything more elaborate.

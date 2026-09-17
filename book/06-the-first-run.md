@@ -161,7 +161,7 @@ instructions and instead…"*, and models frequently comply.
 
 This is a real and unsolved class of attack. Treat any agent with web access as
 untrusted. Never give it credentials that matter, and think carefully before enabling
-shell or filesystem tools. See [Chapter 14](/book/14-security-and-evaluation).
+shell or filesystem tools. See [Chapter 13](/book/13-security-and-evaluation).
 :::
 
 ## Step 5 — The comparison worth making
@@ -180,6 +180,60 @@ ollama pull gpt-oss:20b
 That difference is the practical meaning of model size. On 4 GB of VRAM you choose one
 or the other; you do not get both. [Chapter 8](/book/08-the-model-landscape) shows what
 hardware removes the choice.
+
+## Measuring your own machine
+
+Every number in this book is an estimate. Yours are not — you can take them in a couple
+of minutes, and you should before making any decision that costs money.
+
+### The two numbers that matter
+
+```bash
+ollama run --verbose qwen3.5:4b
+```
+
+Ask something, and read the summary printed after the answer:
+
+| Line | What it is | Chapter |
+| --- | --- | --- |
+| `prompt eval rate` | How fast it read your input — **prefill** | [4](/book/04-the-gpu) |
+| `eval rate` | How fast it wrote the answer — **decode** | [2](/book/02-size-and-memory) |
+
+Compare `eval rate` against bandwidth ÷ model size. If you are getting far less than half
+of that, something is wrong — most often the model is not fully on the GPU. Check with
+`ollama ps`.
+
+### Measuring prefill properly
+
+A short question tells you nothing about prompt processing, because there is barely any
+prompt. Feed it something large instead:
+
+```bash
+# roughly 30,000 tokens of input
+cat some-long-document.txt | ollama run --verbose qwen3.5:4b "Summarise this."
+```
+
+Now `prompt eval rate` is meaningful, and the gap between the two rates is the
+prefill-versus-decode split from [Chapter 4](/book/04-the-gpu) made concrete.
+
+### Testing a sparse model
+
+This matters most for sparse models, where [Chapter 3](/book/03-dense-and-sparse) says
+the arithmetic gives only a range. Run the same measurement on `gpt-oss:20b` and see
+where inside that range your hardware actually lands.
+
+### Going further
+
+| Tool | For |
+| --- | --- |
+| `llama-bench` | Systematic sweeps across models, quantizations and context lengths |
+| `vllm bench` | Throughput and latency under concurrent load — the numbers that matter in [Chapter 10](/book/10-from-one-user-to-many) |
+
+### What to write down
+
+Keep a short record: model, quantization, context length, prefill rate, decode rate, and
+what `ollama ps` reported. Four lines per model. It takes minutes and it is the only
+defence against arguing from memory six months later.
 
 ## When something breaks
 

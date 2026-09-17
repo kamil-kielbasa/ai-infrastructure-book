@@ -11,7 +11,7 @@ kind many people already own.
 | CPU | 8-core / 16-thread mobile x86 | Largely irrelevant to inference |
 | System RAM | 32 GB DDR4-3200 | ~50 GB/s bandwidth |
 | GPU | NVIDIA RTX A2000 Mobile (Ampere) | **4 GB GDDR6, ~190 GB/s, compute capability 8.6** |
-| Storage | NVMe SSD | Only affects load times |
+| Storage | NVMe SSD | Affects load time only, not speed ([Chapter 11](/book/11-reference-architectures#how-long-it-takes-to-start)) |
 | OS | Ubuntu 24.04 LTS | |
 
 This is deliberately unremarkable: a mid-range mobile workstation GPU, a normal amount
@@ -19,9 +19,13 @@ of RAM, a mainstream Linux distribution. If your machine differs, the reasoning 
 unchanged — substitute your own figures into the same arithmetic.
 
 ::: info Adapting this to your machine
-The only two numbers that matter are **VRAM capacity** and **VRAM bandwidth**. Find
-them with `nvidia-smi --query-gpu=name,memory.total --format=csv` and your card's
-specification page. Everything below follows from those two values.
+The only two numbers that matter are **VRAM capacity** and **VRAM bandwidth**. Find the
+first with `nvidia-smi --query-gpu=name,memory.total --format=csv`. The second is not
+reported by any tool — look it up on the card's specification page, and check it, because
+the same card name often covers variants with different memory and clocks. The ~190 GB/s
+used below is a typical figure for this class of card, not a measured one.
+
+Everything in this chapter follows from those two values.
 :::
 
 ## What fits
@@ -29,14 +33,23 @@ specification page. Everything below follows from those two values.
 From [Chapter 2](/book/02-size-and-memory): Q4_K_M costs roughly 0.55 GB per billion
 parameters, plus KV cache, plus overhead.
 
-Four gigabytes of VRAM, with about 1.2 GB reserved for context and runtime, leaves
-roughly 2.8 GB for weights:
+Start from 4 GB and subtract what you do not get to use:
 
-$$\frac{2.8\ \text{GB}}{0.55\ \text{GB per B}} \approx 5\text{B parameters}$$
+| | |
+| --- | --- |
+| Card total | 4.0 GB |
+| Driver and desktop | −0.4 GB |
+| Runtime overhead | −0.3 GB |
+| KV cache, 8K context at 8-bit | −0.3 GB |
+| **Left for weights** | **~3.0 GB** |
 
-In practice the comfortable ceiling is **a 4B model with an 8,000-token context**. A 7B
-model at Q4 needs about 4.7 GB all-in and does not fit, despite its weights alone being
-only 3.9 GB. The margin is what catches people out.
+At 0.55 GB per billion, that is about 5.5B parameters. But models do not come in
+arbitrary sizes — the choices near that line are **4B** or **7–8B**, and 8B needs about
+4.4 GB of weights alone. So the ceiling in practice is **a 4B model with an 8,000-token
+context**, with room to spare.
+
+This rounding-down is the normal experience. You almost never use all of a card; you use
+the largest model that fits under it.
 
 ## How fast
 

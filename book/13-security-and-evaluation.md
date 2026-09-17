@@ -1,4 +1,4 @@
-# 14. Security and evaluation
+# 13. Security and evaluation
 
 Two subjects that are easy to postpone and expensive to retrofit. The first is how these
 systems get attacked. The second is how you tell whether yours is any good.
@@ -71,20 +71,18 @@ Decide early, because changing it later means auditing everything already record
 ## Licensing
 
 "Open weights" is not "open source", and the difference has consequences.
+[Chapter 7](/book/07-reading-model-names#licensing) sets out what the common licenses
+allow. Two points belong here rather than there, because they only bite once something
+ships:
 
-| License | What it allows |
-| --- | --- |
-| Apache 2.0, MIT | Genuinely permissive. Commercial use, modification, redistribution. |
-| Llama Community License | Commercial use with conditions, including a user-count threshold and naming requirements |
-| Research-only, non-commercial | Exactly what it says |
-| Custom vendor licenses | Read them. Terms vary between vendors and between releases. |
+**The license on outputs may differ from the license on the weights.** Some vendors place
+conditions on what you may do with generated text, including whether it can train another
+model.
 
-Check before anything reaches a product. Several strong families — Granite, Qwen, OLMo
-and parts of the Mistral range — are Apache 2.0, which is a real practical advantage over
-an equally capable model with restrictive terms.
+**A fine-tuned model inherits its base model's restrictions.** Starting from a
+research-only model produces a research-only model, however much work you added.
 
-Two things people forget: the license on **outputs** may differ from the license on the
-weights, and a model fine-tuned from a restricted base inherits those restrictions.
+Check both before anything reaches a product.
 
 ## Evaluation
 
@@ -136,7 +134,7 @@ working, and it is the piece almost everyone skips.
 1. Work through [Chapter 6](/book/06-the-first-run), including the model comparison at
    the end.
 2. Drop a document into a chat and ask about it — retrieval at its simplest
-   ([Chapter 13](/book/13-your-own-data)).
+   ([Chapter 12](/book/12-your-own-data)).
 3. Connect a model to your editor ([Chapter 9](/book/09-coding-and-editors)) and try real
    work. Note where it falls short.
 4. Read about prompt injection again before giving any agent access to anything that

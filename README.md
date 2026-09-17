@@ -36,9 +36,10 @@ laptop to a shared cluster.
 | 9 | Coding and editors |
 | 10 | From one user to many |
 | 11 | Reference architectures |
-| 12 | Hardware beyond this book |
-| 13 | Teaching a model your own data |
-| 14 | Security and evaluation |
+| 12 | Teaching a model your own data |
+| 13 | Security and evaluation |
+| 14 | Hardware beyond this book |
+| 15 | Closing |
 
 It builds from the bottom up: a model is a file of numbers, generation is memory
 movement, and everything else follows from those two facts. No machine learning

@@ -20,7 +20,8 @@ determines generation speed, and compute because it determines prompt processing
 | H100 SXM | 80 GB HBM3 | ~3,350 GB/s | ~990 TFLOPS | 25,000–30,000 |
 | H200 SXM | 141 GB HBM3e | ~4,800 GB/s | ~990 TFLOPS | 30,000–40,000 |
 
-Figures are approximate, vary by SKU, and move. Compute is dense FP16/BF16 — vendor
+Figures are approximate, vary by SKU, and move. Prices are order-of-magnitude in EUR as
+of early 2026 — re-check them before quoting anyone. Compute is dense FP16/BF16 — vendor
 sheets often quote double these numbers "with sparsity", which does not apply to
 ordinary inference. Read the ratios rather than the absolute values.
 
@@ -46,8 +47,10 @@ $$2 \times 70 \times 10^9 \times 32 \times 10^3 = 4.5 \times 10^{15}\ \text{FLOP
 | RTX PRO 6000 | ~250 TFLOPS | 18 s | ~50 s |
 | Mac Studio Ultra | ~55 TFLOPS | 82 s | **~4 minutes** |
 
-All three then *generate* at broadly comparable rates, because generation is bound by
-bandwidth and the bandwidth gap is far smaller than the compute gap.
+All three then *generate* several times faster than they prefill, and the spread between
+them narrows: bandwidth differs by about four times across these machines, against
+eighteen times for compute. A Mac Studio is a quarter the speed of an H100 at writing an
+answer, and a twentieth of its speed at reading one.
 
 So a unified-memory machine feels quick in conversation and unbearable the moment you
 paste in something large. If your workload is chat, this barely matters. If it is
@@ -144,18 +147,26 @@ the interconnect out of the design entirely.
 ### What to expect from it
 
 Taking `gpt-oss:120b` on one card — 66 GB of weights, leaving about 28 GB for the KV
-cache pool:
+cache pool. Using the cache figures from [Chapter 2](/book/02-size-and-memory), ~220 MB
+per thousand tokens:
 
-| Configured context | Users served at once | Generation speed | Wait before the first word, 32K prompt |
+| Configured context | Cache per user | Users served at once | Wait before the first word, 32K prompt |
 | --- | --- | --- | --- |
-| 8K | ~20 | 40–60 tok/s | under a second |
-| 32K | ~7 | 40–60 tok/s | ~4 seconds |
-| 128K | ~2 | 40–60 tok/s | ~15 seconds |
+| 8K | 1.8 GB | ~15 | under a second |
+| 32K | 7 GB | ~4 | ~4 seconds |
+| 128K | 28 GB | ~1 | ~15 seconds |
 
-Generation speed barely moves between the rows because it depends on bandwidth and the
-model's active parameters, not on context. What collapses is **how many people fit**.
+**Generation speed** hardly changes down the rows, because it follows bandwidth and the
+model's active parameters rather than context length. For this model on this card, the
+bounds from [Chapter 3](/book/03-dense-and-sparse) are roughly 650 tokens per second
+optimistic and 27 pessimistic — a wide gap, which is exactly why that chapter says to
+measure sparse models rather than trust the arithmetic. Expect comfortably more than a
+reader needs, and confirm it on your own hardware before promising anyone a number.
 
-The first-word figures assume a sparse model, whose prefill cost follows its ~5B active
+What does collapse down the rows is **how many people fit**. Four users at 32K, one at
+128K, from the same card.
+
+The first-word figures follow the model's ~5B active
 parameters rather than its 120B total. A dense 70B model on the same card would take
 roughly 50 seconds on a 32K prompt — ten times longer, from the same hardware. This is
 the strongest practical argument for sparse models in a shared deployment.
@@ -321,6 +332,64 @@ speed, and for the amount of your life spent on it.
 Add machines to serve *more users*, never to make *one model* faster.
 :::
 
+## When it goes wrong
+
+The architectures above describe a system running normally. Four things go wrong often
+enough to plan for.
+
+**The model stops fitting after an update.** A new release of the same model can be
+larger, or default to a longer context, and it no longer loads. This is the most common
+production surprise, and the fix is boring: pin model versions, and test an upgrade on a
+spare card before rolling it out.
+
+**Memory runs out mid-request.** The cache pool fills, and instead of one slow request
+you get failures across every user on that card. Serving stacks let you cap the number of
+concurrent sequences and the maximum context; set both below what the hardware can
+actually take, and it degrades into queueing rather than errors.
+
+**A card fails in a multi-card node.** If several models run independently on separate
+cards, you lose one model and the rest continue. If one model is split across all the
+cards, you lose everything on that node. This is an argument for independent models per
+card that rarely comes up in the capacity discussion.
+
+**The driver breaks after a routine update.** A kernel or driver upgrade that does not
+match leaves the GPU invisible, and inference silently falls back to the CPU — twenty
+times slower, no error message ([Chapter 6](/book/06-the-first-run)). Hold GPU driver
+packages at a known-good version and upgrade them deliberately.
+
+The pattern in all four: failures here are usually **silent or delayed**, not loud. Alert
+on what `ollama ps` or your serving stack reports about device placement, not just on
+whether the process is alive.
+
+## How long it takes to start
+
+One number that never appears in a specification and surprises everyone:
+**model load time**.
+
+The weights have to travel from disk into GPU memory before the first request. That is a
+straight division:
+
+$$\text{load time} \approx \frac{\text{model size in GB}}{\text{disk read speed in GB/s}}$$
+
+| Model | Size at Q4 | On NVMe (~5 GB/s) | On SATA SSD (~0.5 GB/s) |
+| --- | --- | --- | --- |
+| 32B | 18 GB | ~4 s | ~36 s |
+| 120B | 66 GB | ~13 s | ~2 min |
+| 400B | 220 GB | ~45 s | ~7 min |
+
+This matters in three situations, and not at all otherwise:
+
+- **Switching models on one card.** Every switch pays the full cost. If two teams want
+  different models on the same GPU, they will spend their day waiting. Give each model
+  its own card instead.
+- **Restarts.** A four-minute restart is a different operational story from a
+  four-second one when something has broken and people are waiting.
+- **Autoscaling.** Anything that starts a model in response to load inherits this delay.
+  It is usually why "scale to zero" is a bad idea for inference.
+
+Storage is otherwise irrelevant to inference speed, which is why it appears nowhere else
+in this book. Buy NVMe anyway; it costs little and removes the problem.
+
 ## Local against API
 
 The decision is not primarily financial, but the arithmetic is worth doing.
@@ -345,8 +414,33 @@ for the genuinely hard problems. That is a sound outcome, not a failure to commi
 
 ## The cost people forget
 
-A GPU server is a server. It needs power, cooling, driver and model updates,
-monitoring, backups, security patching, and a person who is responsible for it.
+A GPU server is a server. That operational cost is regularly larger than the hardware,
+and it is almost always left out of the comparison. Include it before the meeting, not
+after.
 
-That operational cost is regularly larger than the hardware and is almost always left
-out of the comparison. Include it before the meeting, not after.
+It is worth being concrete about what the job actually is, because "someone to look after
+it" is too vague to budget for.
+
+**Setting it up** — a few days. Driver and CUDA stack, serving software, gateway,
+authentication, monitoring, and getting the first model to serve a team reliably. Mostly
+ordinary Linux administration; nothing here needs a machine learning background.
+
+**Keeping it running** — the recurring work:
+
+| Task | How often | What it involves |
+| --- | --- | --- |
+| Watching capacity | Weekly | Reading the four metrics from [Chapter 10](/book/10-from-one-user-to-many); noticing the cache pool saturating before users complain |
+| Model updates | Monthly-ish | Testing a new release against your evaluation set ([Chapter 13](/book/13-security-and-evaluation)), then swapping it in |
+| Driver and stack upgrades | Quarterly | The riskiest routine task, because a bad driver fails quietly |
+| Access and quotas | Ongoing | Adding people, adjusting limits, answering "why is it slow today" |
+| Incidents | Unpredictable | Usually one of the four failures above |
+
+**Realistically** this is a fraction of one person: something like 20–30% of an engineer
+for a single-server deployment once it is stable, rising sharply if you run several nodes
+or promise uptime to other teams. The work is closest to platform or infrastructure
+engineering, and someone who already runs internal services will find nothing unfamiliar
+in it.
+
+Two things make it much worse than that estimate: having no evaluation set, so every
+model change is a guess; and having no monitoring, so every problem is first reported by
+a user. Both are cheap to fix at the start and expensive to add later.

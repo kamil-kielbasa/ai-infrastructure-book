@@ -54,6 +54,31 @@ A concrete comparison at Q4_K_M:
 
 Nearly the same memory. Roughly ten times the speed.
 
+## Correcting the speed formula
+
+[Chapter 2](/book/02-size-and-memory) gave the rule:
+
+$$\text{tokens per second} \approx \frac{\text{bandwidth}}{\text{model size}}$$
+
+For a sparse model, the denominator is not the total size. Nor, quite, is it the active
+size. It sits between the two, and it is worth knowing why, because the gap can be large.
+
+- **Attention layers are shared.** They are read for every token regardless of which
+  experts the router picks, so they never benefit from sparsity.
+- **Different tokens pick different experts.** Over a batch of requests, most of the
+  model gets touched even though each individual token touched little of it.
+- **Scattered reads are less efficient.** Hardware reaches its rated bandwidth on long
+  sequential reads. Jumping between experts does not qualify.
+
+::: tip How to use the formula on a sparse model
+Compute it with the **active** parameters to get an optimistic bound, and with the
+**total** parameters to get a pessimistic one. Reality lands between them, usually much
+closer to the optimistic end.
+
+If the number matters, measure it ([Chapter 6](/book/06-the-first-run)). This is the one
+place in the book where the arithmetic will not give you a trustworthy answer.
+:::
+
 ## What this unlocks
 
 This is the mechanism that makes modest hardware useful beyond its apparent class.

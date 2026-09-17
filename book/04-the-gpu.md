@@ -64,8 +64,8 @@ exactly the wrong trade.
 | Technology | Typical bandwidth | Found in |
 | --- | --- | --- |
 | DDR4 / DDR5 | 50–100 GB/s | System RAM |
+| GDDR6 | 200–700 GB/s | Mid-range and laptop GPUs |
 | LPDDR5X (unified) | 270–820 GB/s | Apple Silicon, NVIDIA GB10 |
-| GDDR6 | 200–700 GB/s | Mid-range and mobile GPUs |
 | GDDR7 | 1,000–1,800 GB/s | Current high-end GPUs |
 | HBM2e / HBM3 / HBM3e | 2,000–4,800 GB/s | Datacenter accelerators |
 
@@ -97,11 +97,12 @@ prompt. Paste in fifty pages and you wait, possibly minutes, before the first wo
 This is a prefill problem, and no amount of memory fixes it, because prefill is limited
 by arithmetic throughput rather than by memory.
 
-The effect is not marginal. Datacenter accelerators have roughly ten times the matrix
-throughput of a high-end consumer-grade unified-memory machine. For a conversational
-back-and-forth with short prompts, that gap is invisible. For summarising a long
-document, analysing a codebase, or any agent that re-reads a large context on every
-step, it is the dominant cost.
+The effect is not marginal. Datacenter accelerators have roughly **fifteen to twenty
+times** the matrix throughput of a unified-memory workstation
+([Chapter 11](/book/11-reference-architectures) puts numbers on it). For a
+conversational back-and-forth with short prompts, that gap is invisible. For summarising
+a long document, analysing a codebase, or any agent that re-reads a large context on
+every step, it is the dominant cost.
 
 ::: tip Which phase do you care about?
 Short prompts, long answers — chat, drafting — are decode-heavy. Optimise bandwidth.

@@ -45,30 +45,24 @@ at 16-bit, double them.
 The gap between the last two columns is the price of a long context, and it is the
 number most people forget to budget for.
 
-## Memory technologies
+## What you are paying for
 
-The hardware table below quotes several kinds of memory. They are not interchangeable,
-and the differences matter more than the capacity numbers suggest.
+The table below quotes several kinds of memory — GDDR6, GDDR7, HBM3, unified. They are
+described in [Chapter 4](/book/04-the-gpu#memory-technologies); here is what they mean for
+the purchase.
 
-| Type | Bandwidth | How it works | Found in |
-| --- | --- | --- | --- |
-| **GDDR6** | 200–700 GB/s | Standard graphics memory, chips around the GPU on the board | Mid-range and laptop cards |
-| **GDDR7** | 1,000–1,800 GB/s | Newer generation, roughly double the signalling rate | Current high-end cards |
-| **HBM2e / HBM3 / HBM3e** | 2,000–4,800 GB/s | **H**igh **B**andwidth **M**emory: chips stacked vertically and sitting on the same package as the GPU, connected by a bus thousands of bits wide instead of hundreds | Datacenter accelerators |
-| **Unified (LPDDR5X)** | 270–820 GB/s | One pool of memory shared by CPU and GPU, with no copying between them | Apple Silicon, NVIDIA GB10 |
+**Bandwidth is the bulk of a datacenter card's price.** An H100 moves bytes about twice
+as fast as a high-end workstation card and does roughly four times the arithmetic. The
+first of those sets generation speed, the second sets prompt-reading speed
+([Chapter 4](/book/04-the-gpu)). You pay several times more for both together.
 
-Three things follow.
+**The `e` in HBM3e means "enhanced"** — the same technology clocked higher. It is
+essentially the whole difference between an H100 and an H200.
 
-**HBM is what datacenter cards are really selling.** An H100 and a high-end workstation
-card have broadly similar amounts of compute. The H100 costs several times more mainly
-because HBM3 moves bytes two to three times faster, and generation speed is bandwidth
-([Chapter 2](/book/02-size-and-memory)). The `e` in HBM3e means "enhanced" — the same
-technology clocked higher, which is the whole difference between an H100 and an H200.
-
-**Unified memory trades speed for capacity.** Sharing one pool means the GPU can address
-far more memory than any card carries — hundreds of gigabytes — but that memory is
-ordinary laptop-class memory, so it is several times slower than HBM. It also comes with
-a compute penalty that [Chapter 11](/book/11-reference-architectures) quantifies.
+**Unified memory trades speed for capacity.** One shared pool lets the GPU address far
+more memory than any card carries, but it is ordinary laptop-class memory, several times
+slower than HBM, with a compute penalty that
+[Chapter 11](/book/11-reference-architectures) quantifies.
 
 **Capacity and bandwidth are separate purchases.** A machine with 512 GB of unified
 memory holds a model an H100 cannot touch, and runs it more slowly than the H100 would.
@@ -81,13 +75,13 @@ flowchart LR
     T0["<b>Tier 0</b><br/>4 GB<br/>laptop GPU"] --> T1["<b>Tier 1</b><br/>16–24 GB<br/>one consumer card"]
     T1 --> T2["<b>Tier 2</b><br/>32–96 GB<br/>workstation card"]
     T2 --> T3["<b>Tier 3</b><br/>128–512 GB<br/>unified memory"]
-    T3 --> T4["<b>Tier 4</b><br/>160 GB+<br/>multi-GPU server"]
+    T3 --> T4["<b>Tier 4</b><br/>80 GB+<br/>datacenter cards"]
 ```
 
 | Tier | Hardware | GPU memory | Type | Bandwidth | Largest model at Q4, 32K context |
 | --- | --- | --- | --- | --- | --- |
 | **0** | Laptop workstation GPU | 4 GB | GDDR6 | ~190 GB/s | 4B dense |
-| **1** | RTX 4090 / 3090 | 24 GB | GDDR6X | ~1,010 GB/s | 32B dense |
+| **1** | RTX 4090 | 24 GB | GDDR6X | ~1,010 GB/s | 32B dense |
 | **2a** | RTX 5090 | 32 GB | GDDR7 | ~1,790 GB/s | 32B dense, comfortably |
 | **2b** | RTX PRO 6000 Blackwell | 96 GB | GDDR7 | ~1,790 GB/s | 120B sparse |
 | **3a** | DGX Spark (GB10) | 128 GB | Unified | ~273 GB/s | 200B sparse |
@@ -98,7 +92,21 @@ flowchart LR
 
 Figures are approximate and vary between **SKUs** — a SKU, or stock-keeping unit, is a
 vendor's code for one exact product variant. The same card name often covers several,
-with different memory sizes and clocks.
+with different memory sizes and clocks. Prices and parts move; treat the ratios as the
+durable part.
+
+Two things the table does not say.
+
+**Multi-card rows are not one pool.** "4× 96 GB = 384 GB" only holds a 400B model if the
+model is split across all four cards, which needs tensor parallelism and a fast link
+between them ([Chapter 11](/book/11-reference-architectures)). Without NVLink this works
+but costs speed. Running four separate models on four cards has no such problem.
+
+**Tier 0 has a second mode.** The table counts only memory the GPU can reach. A machine
+with a small card but generous system RAM can also run much larger *sparse* models from
+system memory at single-digit tokens per second
+([Chapter 5](/book/05-the-reference-machine)). Slow, but it is the difference between a
+4B model and a 30B one.
 
 ::: tip The answer to the obvious question
 **Yes, you can run the largest open models on your own hardware.** DeepSeek-V3 at 671B
@@ -234,10 +242,9 @@ larger than the difference in benchmark scores suggests.
 Public benchmarks leak into training data, and vendors optimise for them. A model can
 score well and still disappoint on your work.
 
-The only reliable comparison is your own: assemble ten to twenty prompts representative
-of the tasks you actually care about, and run candidates against them. This takes an
-afternoon and is worth more than any leaderboard. [Chapter 14](/book/14-security-and-evaluation)
-expands on this under evaluation.
+Use them for one thing only: a rough shortlist of what is worth testing. The comparison
+that decides anything is your own, against tasks you actually do —
+[Chapter 13](/book/13-security-and-evaluation#evaluation) explains how to build that.
 
 ## Choosing
 

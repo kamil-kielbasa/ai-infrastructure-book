@@ -1,4 +1,4 @@
-# 12. Hardware beyond this book
+# 14. Hardware beyond this book
 
 This book has been deliberately narrow: NVIDIA cards, one or two servers, text models.
 That covers most situations, but it is not the whole field. This chapter sketches what
@@ -63,7 +63,7 @@ Text generation is one workload among several, and the others often deliver valu
 | **Text to speech** | Spoken output | Accessibility, voice interfaces |
 | **Document OCR** | Turning scans and PDFs into structured text | Usually the real bottleneck in a document pipeline |
 | **Vision-language** | Reading images, screenshots and diagrams | Inspection, documentation, accessibility |
-| **Embedding models** | Turning text into vectors | The foundation of retrieval — see [Chapter 13](/book/13-your-own-data) |
+| **Embedding models** | Turning text into vectors | The foundation of retrieval — see [Chapter 12](/book/12-your-own-data) |
 
 These generally need far less memory than chat models. An organisation with one
 mid-range card can often serve transcription and OCR for everybody.
@@ -87,6 +87,9 @@ code change, and it will do so silently.
 
 ## What to read next
 
-If this chapter interested you, the next two are more likely to pay off sooner:
-[Chapter 13](/book/13-your-own-data) on making a model useful with your own material, and
-[Chapter 14](/book/14-security-and-evaluation) on not getting hurt while doing it.
+Nothing in this chapter is where to start. If you have not yet made a model useful with
+your own material ([Chapter 12](/book/12-your-own-data)) or thought about what happens
+when an agent reads something hostile ([Chapter 13](/book/13-security-and-evaluation)),
+both will pay off sooner than any hardware on this page.
+
+[Chapter 15](/book/15-closing) is a page of what to remember from all of it.

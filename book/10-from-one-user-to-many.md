@@ -44,7 +44,7 @@ The result is dramatic, and the opposite of what most people expect:
 
 ::: tip The batching rule
 Twenty concurrent users cost far less than twenty times one user. On a busy server,
-server, throughput can be an order of magnitude higher than sequential processing for
+throughput can be an order of magnitude higher than sequential processing for
 the same hardware.
 :::
 
