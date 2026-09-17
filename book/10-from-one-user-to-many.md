@@ -40,10 +40,10 @@ Processed sequentially, the weights are read twice. Processed together, they are
 **once**, and the same bytes serve both requests. The extra arithmetic for the second
 request is nearly free, because the hardware was waiting on memory anyway.
 
-The consequence is dramatic and counterintuitive:
+The result is dramatic, and the opposite of what most people expect:
 
 ::: tip The batching rule
-Twenty concurrent users cost far less than twenty times one user. On a well-utilised
+Twenty concurrent users cost far less than twenty times one user. On a busy server,
 server, throughput can be an order of magnitude higher than sequential processing for
 the same hardware.
 :::
@@ -53,7 +53,7 @@ new requests join an in-flight batch instead of waiting for it to finish — is 
 feature that separates a production inference server from a development tool.
 
 It also explains why hosted APIs are cheap. Providers run enormous batches; you are
-paying a share of a heavily amortised cost.
+paying a share of a cost spread across a great many people.
 
 ## What the server actually does
 
@@ -78,13 +78,44 @@ into the next batch. It is balancing three things:
 - **Fairness.** A long generation should not starve short ones.
 - **Prefill against decode.** A newly-arrived long prompt needs a big compute burst ([Chapter 4](/book/04-the-gpu)) which stalls everyone else's token stream if scheduled carelessly.
 
-**Paged attention** is the technique that makes this tractable. Instead of reserving a
-contiguous block of memory for each request's maximum possible context, the cache is
-allocated in small pages on demand — the same idea as virtual memory in an operating
-system. It typically doubles or triples the number of concurrent requests that fit.
+**Paged attention** is the technique that makes this workable. Instead of reserving one
+contiguous block of memory for each request's largest possible context, the cache is
+handed out in small pages as it is needed — the same idea as virtual memory in an
+operating system. It typically doubles or triples the number of requests that fit at once.
 
 You do not need to implement any of this. You do need to recognise that a tool which
-lacks it will not scale, no matter how much hardware you give it.
+lacks it will not scale, however much hardware you give it.
+
+## How many people can share one card?
+
+This is the question every capacity plan turns on, and it has a simple answer.
+
+Whatever GPU memory is left after the weights becomes the **KV cache pool**. Divide it by
+what one user's context costs:
+
+$$\text{concurrent users} \approx \frac{\text{GPU memory} - \text{model weights}}{\text{cache per user}}$$
+
+Using the per-token figures from [Chapter 2](/book/02-size-and-memory), a 96 GB card
+running a 70B model at Q4 (39 GB of weights, leaving about 56 GB) works out as:
+
+| Context per user | Cache per user | Users served at once |
+| --- | --- | --- |
+| 8K | 1.3 GB | ~43 |
+| 32K | 5 GB | ~11 |
+| 128K | 21 GB | ~2 |
+| 1M | 164 GB | **0 — will not fit even once** |
+
+::: tip The trade nobody mentions
+Context length and user count are the same budget. You can serve a lot of people with
+short contexts, or very few with long ones.
+
+If a team asks for both "a 128K window" and "everyone can use it at once", those are two
+different machines. Decide which one you are actually buying.
+:::
+
+A gentler option than buying more hardware: cap the configured context at what the work
+needs. Dropping from 128K to 32K on the example above takes the same card from two users
+to eleven.
 
 ## Serving stacks
 
@@ -121,9 +152,18 @@ regression. Ollama was quietly running it at a tenth of the speed.
 Two pieces of infrastructure become necessary at the third column and are premature
 before it:
 
-**A gateway** — an OpenAI-compatible endpoint in front of several backends, handling
-authentication, routing by model name, rate limits and usage accounting. LiteLLM is the
-common choice.
+**A gateway.** One address that every client talks to, sitting in front of several
+inference servers. It answers the same OpenAI-compatible API the servers do, so nothing
+on the client side has to know it exists. Its job is the work no inference server does:
+checking who is calling, sending the request to whichever server holds the requested
+model, enforcing per-team limits, and recording usage so you can answer "what does this
+cost and who is spending it".
+
+**LiteLLM** is the usual choice — an open-source gateway that speaks the OpenAI API on
+the front and translates to whatever is behind it, whether that is vLLM on your own
+hardware or a commercial provider. Being able to mix both behind one endpoint is the
+main reason people pick it: teams keep one URL and one key while you change what runs
+underneath.
 
 **Per-model deployments.** Serving three models from one process serves all three
 badly. Give each its own GPU or its own node, and route by model name at the gateway.

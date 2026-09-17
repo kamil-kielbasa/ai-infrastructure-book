@@ -9,68 +9,124 @@ you are willing to buy.
 
 ## The sizing method
 
-From [Chapter 2](/book/02-size-and-memory), at Q4_K_M each billion parameters costs about
-0.55 GB, and you need roughly 20% on top for context and runtime overhead.
+Everything below is measured in **the memory the GPU can reach**: VRAM on a graphics
+card, or the shared pool on a unified-memory machine ([Chapter 4](/book/04-the-gpu)).
+System RAM does not count. A model that does not fit in that pool either refuses to load
+or spills into system RAM and slows to a crawl.
 
-$$\text{memory needed} \approx \text{total parameters (B)} \times 0.55 \times 1.2$$
+From [Chapter 2](/book/02-size-and-memory), at Q4_K_M each billion parameters costs about
+0.55 GB. On top of the weights you need room for the KV cache and the runtime, which is
+where the third column below comes from:
+
+$$\text{GPU memory needed} \approx \underbrace{\text{total parameters (B)} \times 0.55}_{\text{weights}} + \underbrace{\text{KV cache}}_{\text{depends on context}} + \underbrace{\sim 1\ \text{GB}}_{\text{runtime}}$$
 
 For sparse models, **use the total parameter count, not the active one**
-([Chapter 3](/book/03-dense-and-sparse)). All experts must be resident.
+([Chapter 3](/book/03-dense-and-sparse)). Every expert must be resident even though only
+a few are used per token.
 
-| Total parameters | Weights at Q4 | Practical requirement |
-| --- | --- | --- |
-| 1B | 0.6 GB | 1.5 GB |
-| 4B | 2.2 GB | 3.5 GB |
-| 8B | 4.4 GB | 6 GB |
-| 14B | 7.7 GB | 10 GB |
-| 24B | 13 GB | 16 GB |
-| 32B | 18 GB | 22 GB |
-| 70B | 39 GB | 48 GB |
-| 120B | 66 GB | 80 GB |
-| 235B | 129 GB | 155 GB |
-| 400B | 220 GB | 265 GB |
-| 671B | 369 GB | 440 GB |
-| 1T | 550 GB | 660 GB |
+| Total parameters | Weights at Q4 | With a 32K context | With a 128K context |
+| --- | --- | --- | --- |
+| 1B | 0.6 GB | 2 GB | 4 GB |
+| 4B | 2.2 GB | 4 GB | 8 GB |
+| 8B | 4.4 GB | 7 GB | 13 GB |
+| 14B | 7.7 GB | 12 GB | 20 GB |
+| 24B | 13 GB | 18 GB | 30 GB |
+| 32B | 18 GB | 23 GB | 35 GB |
+| 70B | 39 GB | 45 GB | 61 GB |
+| 120B | 66 GB | 74 GB | 92 GB |
+| 235B | 129 GB | 140 GB | 165 GB |
+| 400B | 220 GB | 235 GB | 270 GB |
+| 671B | 369 GB | 390 GB | 430 GB |
+| 1T | 550 GB | 580 GB | 630 GB |
 
-At Q8 the figures double. At FP16 they quadruple.
+At Q8 the weights double. At FP16 they quadruple. The cache figures assume 8-bit storage;
+at 16-bit, double them.
+
+The gap between the last two columns is the price of a long context, and it is the
+number most people forget to budget for.
+
+## Memory technologies
+
+The hardware table below quotes several kinds of memory. They are not interchangeable,
+and the differences matter more than the capacity numbers suggest.
+
+| Type | Bandwidth | How it works | Found in |
+| --- | --- | --- | --- |
+| **GDDR6** | 200–700 GB/s | Standard graphics memory, chips around the GPU on the board | Mid-range and laptop cards |
+| **GDDR7** | 1,000–1,800 GB/s | Newer generation, roughly double the signalling rate | Current high-end cards |
+| **HBM2e / HBM3 / HBM3e** | 2,000–4,800 GB/s | **H**igh **B**andwidth **M**emory: chips stacked vertically and sitting on the same package as the GPU, connected by a bus thousands of bits wide instead of hundreds | Datacenter accelerators |
+| **Unified (LPDDR5X)** | 270–820 GB/s | One pool of memory shared by CPU and GPU, with no copying between them | Apple Silicon, NVIDIA GB10 |
+
+Three things follow.
+
+**HBM is what datacenter cards are really selling.** An H100 and a high-end workstation
+card have broadly similar amounts of compute. The H100 costs several times more mainly
+because HBM3 moves bytes two to three times faster, and generation speed is bandwidth
+([Chapter 2](/book/02-size-and-memory)). The `e` in HBM3e means "enhanced" — the same
+technology clocked higher, which is the whole difference between an H100 and an H200.
+
+**Unified memory trades speed for capacity.** Sharing one pool means the GPU can address
+far more memory than any card carries — hundreds of gigabytes — but that memory is
+ordinary laptop-class memory, so it is several times slower than HBM. It also comes with
+a compute penalty that [Chapter 11](/book/11-reference-architectures) quantifies.
+
+**Capacity and bandwidth are separate purchases.** A machine with 512 GB of unified
+memory holds a model an H100 cannot touch, and runs it more slowly than the H100 would.
+Neither number alone tells you what you need to know.
 
 ## The hardware tiers
 
 ```mermaid
 flowchart LR
     T0["<b>Tier 0</b><br/>4 GB<br/>laptop GPU"] --> T1["<b>Tier 1</b><br/>16–24 GB<br/>one consumer card"]
-    T1 --> T2["<b>Tier 2</b><br/>32–96 GB<br/>high-end workstation"]
+    T1 --> T2["<b>Tier 2</b><br/>32–96 GB<br/>workstation card"]
     T2 --> T3["<b>Tier 3</b><br/>128–512 GB<br/>unified memory"]
-    T3 --> T4["<b>Tier 4</b><br/>640 GB+<br/>multi-GPU server"]
+    T3 --> T4["<b>Tier 4</b><br/>160 GB+<br/>multi-GPU server"]
 ```
 
-| Tier | Hardware | VRAM | Bandwidth | Largest model at Q4 |
-| --- | --- | --- | --- | --- |
-| **0** | Mobile workstation GPU | 4 GB | ~190 GB/s | 4B dense |
-| **1** | RTX 4090 / 3090 | 24 GB | ~1,010 GB/s | 32B dense, 30B sparse |
-| **2a** | RTX 5090 | 32 GB | ~1,790 GB/s | 32B dense comfortably |
-| **2b** | RTX PRO 6000 Blackwell | 96 GB | ~1,790 GB/s | 120B sparse |
-| **3a** | DGX Spark (GB10) | 128 GB unified | ~273 GB/s | 200B sparse |
-| **3b** | Mac Studio, M-series Ultra | up to 512 GB unified | ~820 GB/s | **671B sparse** |
-| **4a** | 1× H100 SXM | 80 GB HBM3 | ~3,350 GB/s | 120B sparse |
-| **4b** | 8× H100 | 640 GB HBM3 | ~3,350 GB/s per GPU | 671B at FP8, production speed |
-| **4c** | 8× H200 | 1,128 GB HBM3e | ~4,800 GB/s per GPU | 1T sparse |
+| Tier | Hardware | GPU memory | Type | Bandwidth | Largest model at Q4, 32K context |
+| --- | --- | --- | --- | --- | --- |
+| **0** | Laptop workstation GPU | 4 GB | GDDR6 | ~190 GB/s | 4B dense |
+| **1** | RTX 4090 / 3090 | 24 GB | GDDR6X | ~1,010 GB/s | 32B dense |
+| **2a** | RTX 5090 | 32 GB | GDDR7 | ~1,790 GB/s | 32B dense, comfortably |
+| **2b** | RTX PRO 6000 Blackwell | 96 GB | GDDR7 | ~1,790 GB/s | 120B sparse |
+| **3a** | DGX Spark (GB10) | 128 GB | Unified | ~273 GB/s | 200B sparse |
+| **3b** | Mac Studio, M-series Ultra | up to 512 GB | Unified | ~820 GB/s | **671B sparse** |
+| **4a** | 1× H100 SXM | 80 GB | HBM3 | ~3,350 GB/s | 120B sparse |
+| **4b** | 4× RTX PRO 6000 | 384 GB | GDDR7 | ~1,790 GB/s each | 400B sparse |
+| **4c** | 8× H200 | 1,128 GB | HBM3e | ~4,800 GB/s each | 1T sparse |
 
-Bandwidth figures are approximate and vary by SKU. Compute figures are omitted here
-and covered in [Chapter 11](/book/11-reference-architectures), where they affect the
-decision.
+Figures are approximate and vary between **SKUs** — a SKU, or stock-keeping unit, is a
+vendor's code for one exact product variant. The same card name often covers several,
+with different memory sizes and clocks.
 
 ::: tip The answer to the obvious question
 **Yes, you can run the largest open models on your own hardware.** DeepSeek-V3 at 671B
 parameters fits in a single Mac Studio with 512 GB of unified memory, at Q4, for around
 €10,000 — roughly the price of one H100.
 
-It will generate at a usable rate and process long prompts slowly, for exactly the
-reasons set out in [Chapter 4](/book/04-the-gpu). "Not achievable locally" is almost never
-true. "Not achievable at this price, at this speed" usually is.
+It will generate at a usable rate and read long prompts slowly, for exactly the reasons
+in [Chapter 4](/book/04-the-gpu). "Not achievable locally" is almost never true. "Not
+achievable at this price, at this speed" usually is.
 :::
 
 ## The model range
+
+::: info The same family appears more than once
+A family is a recipe, not a size. `qwen3.5` ships in everything from 0.8B to 122B;
+`gpt-oss` comes as 20B and 120B; `granite4.2` as 3B, 8B and 30B. Seeing the same name in
+two tiers below is not a mistake — it is the same training approach at a different scale,
+and the sizes behave very differently.
+
+Always pin the size when you pull a model. `gpt-oss:20b` and `gpt-oss:120b` are a six-fold
+difference in hardware.
+:::
+
+**On context.** Most models released since 2024 advertise a 128K-token window; a few
+reach 256K or beyond. Two cautions. The advertised figure is an upper limit, not a
+promise of quality — many models degrade well before it. And the window you *configure*
+is what costs memory, so the tables above are worth rereading before you set it. Check
+the model card for the real number.
 
 ### Small — Tier 0 and up
 
@@ -89,38 +145,38 @@ Not useful for: multi-step reasoning, agentic coding.
 
 | Model | Size | Notes |
 | --- | --- | --- |
-| `qwen3.5` | 9B, 27B | The size most people find "good enough" |
-| `gemma4` | 12B, 26B | Vision, tools, thinking |
-| `granite4.2` | 8B, 30B | Enterprise workloads, RAG |
-| `mistral-small3.2` | 24B | Vision and tools |
-| `gpt-oss` | 20B sparse | Reasoning and agents |
-| `qwen3-coder` | 30B sparse | Code |
-| `devstral-small-2` | 24B | Agentic coding |
+| `qwen3.5:9b`, `qwen3.5:27b` | 9B, 27B dense | The size most people find "good enough" |
+| `gemma4:12b`, `gemma4:26b` | 12B, 26B dense | Vision, tools, thinking |
+| `granite4.2:8b` | 8B dense | Enterprise workloads, retrieval |
+| `mistral-small3.2` | 24B dense | Vision and tools |
+| `gpt-oss:20b` | 20B sparse | Reasoning and agents |
+| `qwen3-coder:30b` | 30B sparse | Code |
+| `devstral-small-2` | 24B dense | Agentic coding |
 
-This tier is the sweet spot for individual developers. A single 24 GB card runs
-everything here at 20–50 tokens per second.
+This tier is the sweet spot for one developer. A single 24 GB card runs everything here
+at 20–50 tokens per second with a 32K context.
 
 ### Large — Tier 2 and 3
 
-| Model | Total / active | Q4 memory | Notes |
+| Model | Total / active | Q4 weights | Notes |
 | --- | --- | --- | --- |
-| `llama3.3` | 70B dense | ~48 GB | Long-standing reference point |
-| `gpt-oss` | 120B sparse | ~80 GB | Fits one RTX PRO 6000 or one H100 |
-| `qwen3-next` | 80B-A3B | ~55 GB | Very fast for its capability |
-| `nemotron-3-super` | 120B-A12B | ~80 GB | Multi-agent workloads |
-| `mistral-medium-3.5` | 128B | ~85 GB | Vision, tools, thinking |
-| `qwen3.5` | 122B sparse | ~82 GB | |
+| `llama3.3:70b` | 70B dense | ~39 GB | Long-standing reference point |
+| `qwen3-next:80b` | 80B-A3B | ~44 GB | Very fast for its capability |
+| `gpt-oss:120b` | 120B sparse | ~66 GB | Fits one 96 GB card, or one H100 |
+| `nemotron-3-super` | 120B-A12B | ~66 GB | Multi-agent workloads |
+| `qwen3.5:122b` | 122B sparse | ~67 GB | |
+| `mistral-medium-3.5` | 128B | ~70 GB | Vision, tools, thinking |
 
 This is where open models start being straightforwardly competitive with hosted
 services for most work.
 
 ### Frontier open weights — Tier 3b and 4
 
-| Model | Total / active | Q4 memory | Minimum practical hardware |
+| Model | Total / active | Q4 weights | Minimum practical hardware |
 | --- | --- | --- | --- |
-| `llama4` | 400B-A17B | ~265 GB | Mac Studio 512 GB, or 4× H100 |
-| `deepseek-v3` | 671B-A37B | ~440 GB | Mac Studio 512 GB, or 8× H100 |
-| `kimi-k2` and successors | ~1T-A32B | ~660 GB | 8× H200 |
+| `llama4` | 400B-A17B | ~220 GB | Mac Studio 512 GB, or 3× 96 GB cards |
+| `deepseek-v3` | 671B-A37B | ~369 GB | Mac Studio 512 GB, or 4× 96 GB cards |
+| `kimi-k2` and successors | ~1T-A32B | ~550 GB | 8× H200, or a very large unified-memory machine |
 | `glm-5.x` | not disclosed | — | Rack-scale |
 
 DeepSeek-V3's own documentation recommends SGLang, vLLM or TensorRT-LLM across
@@ -180,7 +236,7 @@ score well and still disappoint on your work.
 
 The only reliable comparison is your own: assemble ten to twenty prompts representative
 of the tasks you actually care about, and run candidates against them. This takes an
-afternoon and is worth more than any leaderboard. [Chapter 12](/book/12-what-to-learn-next)
+afternoon and is worth more than any leaderboard. [Chapter 14](/book/14-security-and-evaluation)
 expands on this under evaluation.
 
 ## Choosing

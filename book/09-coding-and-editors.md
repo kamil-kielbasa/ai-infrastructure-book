@@ -77,24 +77,52 @@ model; it needs a fast one.
 The productive pattern is not "replace the hosted assistant" but "route each task to
 the cheapest thing that can do it".
 
-| Task | Model size | Why |
-| --- | --- | --- |
-| Inline completion | 1–3B | Latency dominates. Larger models are worse here. |
-| Explaining unfamiliar code | 8–30B | Needs comprehension, not autonomy |
-| Well-specified single-file edits | 8–30B | Achievable locally |
-| Multi-file refactoring across a repository | 100B+ | Needs sustained planning |
-| Long-horizon agentic work | Frontier | Currently the honest answer |
+| Task | Model size | Hardware tier | Why |
+| --- | --- | --- | --- |
+| Inline completion | 1–3B | 0 | Latency dominates. Bigger models are worse here. |
+| Explaining unfamiliar code | 8–30B | 1 | Needs comprehension, not autonomy |
+| Well-specified single-file edits | 8–30B | 1 | Achievable locally |
+| Multi-file refactoring across a repository | 100B+ | 2 | Needs sustained planning |
+| Long-horizon agentic work | Frontier | 3–4 | Currently the honest answer |
+
+Tiers refer to [Chapter 8](/book/08-the-model-landscape).
+
+## What agentic coding really demands
+
+Coding agents are the most demanding thing in this book, and for a reason worth spelling
+out: they are heavy on **both** halves of the hardware problem.
+
+**They read enormous prompts.** Every step re-sends the task, the files in play, and the
+history of what has happened so far. Prompts of 20,000–50,000 tokens are routine. That
+is prefill, and prefill is compute ([Chapter 4](/book/04-the-gpu)).
+
+**They generate text nobody reads.** Plans, tool calls, diffs, retries. A single task can
+produce tens of thousands of tokens. That is decode, and decode is bandwidth.
+
+So the speed table from [Chapter 2](/book/02-size-and-memory) applies with force:
+
+| Generation speed | A 20-step coding task takes |
+| --- | --- |
+| 5 tokens/s | around half an hour |
+| 20 tokens/s | around eight minutes |
+| 60 tokens/s | around three minutes |
+
+Nothing about the model changes between those rows. Only the hardware does. A setup that
+feels fine for conversation can make the same model useless for agentic work, and this is
+the single most common disappointment people report.
 
 ## Expectations, stated plainly
 
-A 4B model on a laptop is useful for boilerplate, explaining code you did not write,
-small well-specified edits, and commit messages. It is not close to a hosted frontier
-model for agentic work on a real codebase.
+**Small models (1–4B).** Boilerplate, explaining code you did not write, small
+well-specified edits, commit messages. Not agentic work on a real codebase, at any speed.
 
-The 30B sparse coding models are genuinely capable — but at single-digit tokens per
-second, an agentic loop making twenty tool calls takes a long time. On Tier 1 hardware
-([Chapter 8](/book/08-the-model-landscape)) the same model runs ten times faster and the
-calculation changes completely.
+**Mid-range models (8–30B).** Genuinely useful for single-file work and comprehension.
+Capable of short agentic sequences. The capability is real; whether it is *pleasant*
+depends entirely on how fast your hardware runs them.
+
+**Large models (100B+).** Competitive with hosted services for a lot of real work — and
+they need Tier 2 hardware or better before the agentic loop finishes in a reasonable
+time.
 
 Running coding models locally is a privacy and cost decision first, and a capability
 decision second. When the work is sensitive, or the volume is high and steady, it wins.

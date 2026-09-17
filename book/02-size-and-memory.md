@@ -28,6 +28,49 @@ Hold on to this. It is the reason the next chapter is about memory rather than c
 and the reason [Chapter 11](/book/11-reference-architectures) recommends the hardware it
 does.
 
+## How fast is fast enough?
+
+"Tokens per second" means nothing until you have something to compare it against. Here
+are the anchors.
+
+A person reads at roughly 250 words a minute. In English that is about **5 tokens per
+second**. Speech is slower still, around 3. So a model producing 5 tokens per second is
+filling the screen exactly as fast as you can take it in.
+
+| Tokens/second | How it feels |
+| --- | --- |
+| Under 3 | Painful. Slower than someone talking. |
+| 5 | Keeps pace with reading. Fine for chat, tiring for anything else. |
+| 10–20 | Comfortable. Text arrives faster than you consume it. |
+| 30–60 | The range hosted assistants usually feel like. |
+| 100+ | Beyond perception for reading. Only matters for the case below. |
+
+Above about 20 tokens per second, a human cannot tell the difference. So why chase more?
+
+**Because agents do not read.** When a model uses tools
+([Chapter 6](/book/06-the-first-run)), it generates text no one ever looks at: plans,
+tool calls, summaries of what came back. A task involving twenty tool calls might
+produce 10,000 tokens in total.
+
+| Speed | Time for a 20-step agent task |
+| --- | --- |
+| 5 tokens/s | ~33 minutes |
+| 20 tokens/s | ~8 minutes |
+| 60 tokens/s | ~3 minutes |
+
+The same hardware that feels perfectly adequate for conversation can make agentic work
+unusable. When you judge a setup, decide first which of the two you are buying.
+
+### The other number: waiting for the first word
+
+Speed has a second half. **Time to first token** is the pause between pressing Enter and
+the first word appearing, and it depends on prompt length rather than answer length.
+
+A short question gives a near-instant start. Paste in a long document and the delay can
+stretch to seconds or minutes, because the model must read all of it before writing
+anything. [Chapter 4](/book/04-the-gpu) explains why this half of the problem depends on
+entirely different hardware.
+
 ## From parameters to gigabytes
 
 Training produces parameters as 16-bit floating-point numbers — **FP16** — two bytes
@@ -43,7 +86,7 @@ Those numbers are why nobody runs models at full precision on their own hardware
 
 **Quantization** stores the same parameters using fewer bits. It is lossy compression,
 in the same sense that an MP3 is a lossy version of a WAV: you accept a small
-degradation, mostly imperceptible, in exchange for a much smaller file.
+degradation you will usually not notice, in exchange for a much smaller file.
 
 Instead of two bytes per parameter, you use roughly half a byte.
 
@@ -87,22 +130,54 @@ If a model does not fit at Q4, the answer is a different model, not a more aggre
 quantization. Practically everyone runs Q4_K_M practically all the time, and most
 tooling defaults to it.
 
-## Context costs memory too
+## What context costs
 
 Alongside the weights sits the **KV cache** — the model's working notes on the
-conversation so far. Think of it as scratch space that saves the model from
-recomputing everything it has already read.
+conversation so far. It saves the model from re-reading everything it has already seen.
 
-It grows linearly with context length, and it can become large. On a small model with
-a long context, the cache can rival the weights in size.
+The cache is not a detail. It grows in a straight line with context length, and on long
+contexts it can dwarf the weights themselves. This is the cost that almost every
+discussion of local models leaves out, and it is the reason a setup that works on Monday
+fails on Friday when someone pastes in a bigger document.
 
-Two practical consequences:
+### The numbers
 
-- **The same compression trick applies.** Storing the cache at 8-bit instead of 16-bit
-  roughly halves it, with no quality cost you will notice.
-- **Raising the context length can break a working setup.** A model that loaded
-  perfectly at 4,000 tokens may fail at 32,000. The weights did not change; the cache
-  did.
+Cost per token depends on the model's internal shape:
+
+$$\text{bytes per token} = 2 \times \text{layers} \times \text{KV heads} \times \text{head size} \times \text{bytes per value}$$
+
+You rarely need to compute it. These are the figures for typical modern models, storing
+the cache at 8-bit:
+
+| Model size | Cache per 1,000 tokens | 32K context | 128K context | 1M context |
+| --- | --- | --- | --- | --- |
+| 8B | ~64 MB | 2 GB | 8 GB | 64 GB |
+| 32B | ~128 MB | 4 GB | 16 GB | 128 GB |
+| 70B | ~160 MB | 5 GB | 21 GB | 164 GB |
+
+Approximate — architectures differ, and a model card will give you the exact shape.
+
+Read the last column carefully. A 70B model's weights come to about 39 GB at Q4. Giving
+it a **one-million-token context costs four times more memory than the model itself.**
+
+::: warning Long context is a hardware purchase
+Hosted services advertise context windows of 200K or a million tokens. Those numbers are
+real, and they are expensive. Running the same thing yourself means buying the memory to
+hold it — and that memory is multiplied again by every user who is served at the same
+time ([Chapter 10](/book/10-from-one-user-to-many)).
+
+Deciding you need a million tokens of context is a bigger commitment than deciding you
+need a 70B model.
+:::
+
+### What to do about it
+
+- **Store the cache at 8-bit.** It halves the cost against the 16-bit default, with no
+  quality loss you will notice. Most runtimes support this with one setting.
+- **Ask for the context you actually use.** Most work fits in 8K–32K. Reserving 128K
+  "just in case" spends memory every second the model is loaded.
+- **Check the model's real limit.** A model advertised with a 128K window is often
+  trained well for far less, and quality degrades in the upper range.
 
 ## The memory budget
 
@@ -126,8 +201,9 @@ suggests it should. The margin matters.
 
 - Model size in GB ≈ parameters × bytes per parameter, and Q4_K_M means ~0.55 GB per
   billion.
-- Generation speed ≈ memory bandwidth ÷ model size.
-- Context is a second, variable memory cost, and it is the usual reason a
-  previously-working setup stops fitting.
+- Generation speed ≈ memory bandwidth ÷ model size. Above 20 tokens per second a reader
+  cannot tell the difference; an agent can.
+- Context is a second memory cost that grows with use, and on long contexts it can
+  exceed the weights.
 
 The next chapter asks where those bytes should live.

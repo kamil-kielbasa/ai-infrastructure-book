@@ -68,7 +68,7 @@ one: it chains tool calls, holds a plan across steps, and recovers from its own
 mistakes.
 
 The trade is real but modest. Sparse models are generally a little weaker than dense
-models of the same *total* size, because not all capacity is brought to bear on each
+models of the same *total* size, because not all of the model is used on each
 token. They are dramatically stronger than dense models of the same *active* size.
 That is the whole point of the architecture.
 

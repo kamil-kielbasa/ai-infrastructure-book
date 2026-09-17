@@ -52,7 +52,7 @@ bandwidth and the bandwidth gap is far smaller than the compute gap.
 So a unified-memory machine feels quick in conversation and unbearable the moment you
 paste in something large. If your workload is chat, this barely matters. If it is
 document analysis, code review, or any agent that re-reads a large context on every
-step, it is disqualifying.
+step, it rules the machine out.
 
 ## Architecture A — one person
 
@@ -68,15 +68,28 @@ Everything on one machine, as built in [Chapter 6](/book/06-the-first-run).
 
 | | Entry | Serious |
 | --- | --- | --- |
-| Hardware | Existing laptop, 4 GB VRAM | Workstation with one RTX 5090 |
-| Cost | 0 | 3,500–4,500 incl. the rest of the machine |
+| Hardware | Existing laptop, 4 GB | Workstation, one 32 GB card |
+| Cost | 0 | €3,500–4,500 for the whole machine |
 | Stack | Ollama + Open WebUI | Same |
-| Models | 4B fast, 30B sparse slowly | Up to 32B dense at 30–60 tok/s |
-| Good for | Learning, light assistance | Real daily use, agentic coding on one repository |
+| Good for | Learning, light assistance | Daily use, agentic coding on one repository |
 
-The jump from the first column to the second is the best value in this entire chapter.
-A single consumer card moves you from "interesting toy" to "genuinely useful" for
-roughly the price of a laptop.
+### What to expect from it
+
+On the 32 GB card, running a 32B dense model at Q4 (18 GB of weights, leaving ~13 GB):
+
+| Configured context | Fits? | Generation speed | Wait before the first word, 32K prompt |
+| --- | --- | --- | --- |
+| 8K | Yes, easily | 50–70 tok/s | ~2 seconds |
+| 32K | Yes | 50–70 tok/s | ~30 seconds |
+| 128K | No — needs ~35 GB | — | — |
+
+The 128K row is the useful one. A card that runs a 32B model beautifully at 32K cannot
+run the same model at 128K at all. Context is bought in GPU memory, not configured for
+free.
+
+The jump from the entry column to the serious one is the best value in this chapter. One
+card moves you from "interesting toy" to "genuinely useful" for about the price of a
+laptop.
 
 **Do not scale this by adding people.** Ollama serialises requests
 ([Chapter 10](/book/10-from-one-user-to-many)); the second concurrent user halves
@@ -87,107 +100,160 @@ everyone's speed.
 Five to fifteen developers sharing one server.
 
 ```mermaid
-flowchart TB
-    subgraph clients [Clients]
-        D1[Developer]
-        D2[Developer]
-        D3[CI pipeline]
-    end
-    subgraph server [Inference server]
-        GW[LiteLLM gateway<br/>auth · routing · quotas]
-        V1[vLLM — general model]
-        V2[vLLM — coding model]
-        GW --> V1
-        GW --> V2
-        V1 --> GPU1[(GPU 1 — 96 GB)]
-        V2 --> GPU2[(GPU 2 — 96 GB)]
-    end
+flowchart LR
+    D1[Developers]
+    D2[CI pipeline]
+    W[Open WebUI]
+    GW[Gateway]
+    V1[vLLM]
+    V2[vLLM]
+    G1[(GPU 1<br/>96 GB)]
+    G2[(GPU 2<br/>96 GB)]
+
     D1 --> GW
     D2 --> GW
-    D3 --> GW
-    WEB[Open WebUI] --> GW
+    W --> GW
+    GW -->|general model| V1
+    GW -->|coding model| V2
+    V1 --> G1
+    V2 --> G2
 ```
 
-**Hardware.** One server with two RTX PRO 6000 Blackwell cards: 192 GB of VRAM total,
-~1,790 GB/s each, in a standard workstation chassis with ordinary power and cooling.
+The gateway handles authentication, routing and quotas
+([Chapter 10](/book/10-from-one-user-to-many)).
+
+**Hardware.** One server with two 96 GB workstation cards — 192 GB of GPU memory in
+total, about 1,790 GB/s each, in a standard chassis with ordinary power and cooling.
 
 | Item | Cost (EUR) |
 | --- | --- |
-| 2× RTX PRO 6000 Blackwell | 16,000–20,000 |
-| Server chassis, CPU, 256 GB RAM, NVMe | 5,000–7,000 |
+| 2× RTX PRO 6000 Blackwell, 96 GB | 16,000–20,000 |
+| Chassis, CPU, 256 GB RAM, NVMe | 5,000–7,000 |
 | **Capital total** | **21,000–27,000** |
-| Power, ~1.2 kW continuous at €0.25/kWh | ~220/month |
-| Amortised over 3 years | ~700/month |
+| Power, ~1.2 kW at €0.25/kWh | ~220/month |
+| Spread over 3 years | ~700/month |
 | **Running total** | **~900/month** |
 
-**What it runs.** Each card independently holds a model up to ~120B sparse at Q4. A
-typical split: a general model on one card, a coding model on the other.
-
-| Card | Model | Concurrent users |
-| --- | --- | --- |
-| GPU 1 | `gpt-oss:120b` or `qwen3.5:122b` | 10–20 comfortably |
-| GPU 2 | `qwen3-coder` or `devstral` | 10–20 comfortably |
+**What it runs.** Each card independently holds a model up to about 120B sparse at Q4.
+The usual split is a general model on one card and a coding model on the other.
 
 The two cards are deliberately **not** joined to run one larger model. Two independent
-models serving separate workloads is more useful to a team than one bigger model, and
-it removes the interconnect from the design entirely.
+models serving two workloads is worth more to a team than one bigger model, and it keeps
+the interconnect out of the design entirely.
+
+### What to expect from it
+
+Taking `gpt-oss:120b` on one card — 66 GB of weights, leaving about 28 GB for the KV
+cache pool:
+
+| Configured context | Users served at once | Generation speed | Wait before the first word, 32K prompt |
+| --- | --- | --- | --- |
+| 8K | ~20 | 40–60 tok/s | under a second |
+| 32K | ~7 | 40–60 tok/s | ~4 seconds |
+| 128K | ~2 | 40–60 tok/s | ~15 seconds |
+
+Generation speed barely moves between the rows because it depends on bandwidth and the
+model's active parameters, not on context. What collapses is **how many people fit**.
+
+The first-word figures assume a sparse model, whose prefill cost follows its ~5B active
+parameters rather than its 120B total. A dense 70B model on the same card would take
+roughly 50 seconds on a 32K prompt — ten times longer, from the same hardware. This is
+the strongest practical argument for sparse models in a shared deployment.
 
 **What is now required that was not before:** monitoring (the four metrics from
-[Chapter 10](/book/10-from-one-user-to-many)), a gateway for authentication and quotas,
-and someone whose job includes keeping it running.
+[Chapter 10](/book/10-from-one-user-to-many)), a gateway, and someone whose job includes
+keeping it running.
 
 ## Architecture C — several teams
 
-Fifty or more users, multiple models, uptime expectations.
+Fifty or more users, several models, uptime expectations.
 
 ```mermaid
-flowchart TB
-    subgraph users [Users]
-        T1[Team A]
-        T2[Team B]
-        T3[Automation]
-    end
-    LB[Load balancer]
-    GW[Gateway<br/>auth · routing · quotas · usage accounting]
-    subgraph n1 [Node 1 — 8 GPUs, NVLink]
-        M1[Large general model<br/>tensor-parallel across 8 GPUs]
-    end
-    subgraph n2 [Node 2 — 8 GPUs, NVLink]
-        M2[Coding model ×4 replicas]
-        M3[Embedding model]
-    end
-    OBS[(Metrics · logs · traces)]
+flowchart LR
+    T1[Team A]
+    T2[Team B]
+    T3[Automation]
+    GW[Gateway<br/>auth and quotas]
+    V1[Large general model]
+    V2[Coding model<br/>2 replicas]
+    V3[Embedding model]
+    OBS[(Metrics and logs)]
 
-    T1 --> LB
-    T2 --> LB
-    T3 --> LB
-    LB --> GW
-    GW -->|by model name| n1
-    GW -->|by model name| n2
+    T1 --> GW
+    T2 --> GW
+    T3 --> GW
+    GW -->|by model name| V1
+    GW -->|by model name| V2
+    GW -->|by model name| V3
     GW -.-> OBS
 ```
 
-**Hardware.** One or more 8-GPU nodes. An 8× H100 node provides 640 GB of VRAM joined
-by NVLink; an 8× H200 node provides 1,128 GB.
+### The budget version first
 
-| Item | Cost (EUR) |
-| --- | --- |
-| 8× H100 SXM node, complete | 200,000–300,000 |
-| Power, ~10 kW continuous | ~1,800/month |
-| Cooling, rack, network | substantial; site-dependent |
-| Amortised over 3 years | ~7,000/month |
+The obvious build here is a node of eight datacenter accelerators. It is also, for most
+organisations, the wrong one — a quarter of a million euros, ten kilowatts, and a server
+room. Start lower.
 
-At this point renting deserves serious consideration. Cloud GPU instances cost roughly
-€2–4 per H100-hour; an 8-GPU node used eight hours a day works out near €4,000–6,000
-per month with none of the capital risk and no hardware that depreciates.
+**Four 96 GB workstation cards in one server** give you 384 GB of GPU memory for roughly
+a fifth of that price, in a chassis that lives in an ordinary office.
 
-**What it runs.** Everything, including the largest open-weight models
-([Chapter 8](/book/08-the-model-landscape)): DeepSeek-V3 at 671B, tensor-parallel across
-eight GPUs, at production speed.
+| Item | Budget build | Datacenter build |
+| --- | --- | --- |
+| GPUs | 4× RTX PRO 6000, 96 GB | 8× H100 SXM, 80 GB |
+| Total GPU memory | 384 GB | 640 GB |
+| Bandwidth per GPU | ~1,790 GB/s | ~3,350 GB/s |
+| Interconnect | PCIe | NVLink |
+| Hardware cost | €40,000–50,000 | €200,000–300,000 |
+| Power | ~3 kW | ~10 kW |
+| Cooling | Normal room air | Server room or liquid |
+| Spread over 3 years | ~€1,400/month | ~€7,000/month |
+
+The budget build has **more memory for a fifth of the money**. What it gives up is
+bandwidth per card and NVLink, which matters in one specific case: splitting a single
+very large model across all the GPUs. For running several separate models — which is what
+a multi-team deployment actually does — the cards never need to talk to each other and
+the interconnect is irrelevant.
+
+::: tip Buy memory before you buy bandwidth
+Datacenter accelerators are worth their price when many people hammer one large model at
+once. Below that, workstation cards give more capability per euro, and the difference
+funds several years of operations.
+:::
+
+### About cooling
+
+This is a real constraint, not a footnote. An 8-GPU datacenter node draws around 10 kW
+continuously — roughly five domestic kettles, running permanently, all of it turning into
+heat in one rack. That needs a room designed for it: dedicated power, forced airflow or
+liquid cooling, and often a cooling budget comparable to the power budget.
+
+A 3 kW workstation build plugs into a normal circuit and survives on room air. This
+difference alone frequently decides the question, because the datacenter option is not
+"the same thing but more expensive" — it is a building project.
+
+### What each runs
+
+| Build | Can hold | Typical deployment |
+| --- | --- | --- |
+| 4× 96 GB (384 GB) | `llama4` 400B-A17B at Q4 | One large model, or three mid-size models with replicas |
+| 8× H100 (640 GB) | `deepseek-v3` 671B-A37B at Q4 | The largest open models, at production speed |
+
+With four cards, the common arrangement is not one enormous model but several useful
+ones: a large general model on two cards, a coding model on a third, an embedding model
+on the fourth.
+
+### Renting
+
+At this tier, renting deserves serious thought. Cloud GPU instances run roughly €2–4 per
+accelerator-hour. A node used eight hours a day lands near €4,000–6,000 a month — no
+capital outlay, no depreciation, no server room.
+
+Buy when the load is steady and the data cannot leave. Rent when it is bursty or you are
+still learning what you need.
 
 **What is now required:** orchestration, model versioning, per-team quotas, usage
-accounting, on-call rotation. The infrastructure around the model exceeds the model in
-both complexity and cost.
+accounting, and an on-call rotation. The infrastructure around the models exceeds the
+models in both complexity and cost.
 
 ## How GPUs actually connect
 
@@ -196,28 +262,35 @@ of magnitude.
 
 ```mermaid
 flowchart TB
-    subgraph node1 [One node]
-        G1[GPU 0] <-->|"NVLink<br/>900 GB/s"| G2[GPU 1]
-        G2 <-->|NVLink| G3[GPU 2]
-        G3 <-->|NVLink| G4[GPU 3]
+    subgraph node1 [Server A]
+        direction LR
+        G1[GPU 0] <--> G2[GPU 1]
+        G2 <--> G3[GPU 2]
+        G3 <--> G4[GPU 3]
     end
-    subgraph node2 [Another node]
+    CPU[Host CPU and RAM]
+    subgraph node2 [Server B]
+        direction LR
         H1[GPU 0] <--> H2[GPU 1]
     end
-    node1 <-->|"InfiniBand / 100GbE<br/>12–50 GB/s"| node2
-    G1 <-->|"PCIe 5.0 ×16<br/>64 GB/s"| CPU[Host CPU / RAM]
+
+    node1 <--> CPU
+    node1 <--> node2
 ```
 
-| Link | Bandwidth | Where |
-| --- | --- | --- |
-| NVLink | up to ~900 GB/s | Between GPUs inside one chassis |
-| PCIe 5.0 ×16 | ~64 GB/s | GPU to host, and between GPUs without NVLink |
-| InfiniBand NDR | ~50 GB/s | Between nodes in a cluster |
-| 100 GbE | ~12 GB/s | Between nodes, commodity |
-| 10 GbE | ~1.2 GB/s | Ordinary office network |
+Inside a server the GPUs are joined by NVLink. Between servers they are joined by the
+network. The gap between those two is the whole point:
 
-Compare the top of that table with the bottom: NVLink is roughly 750 times faster than
-an ordinary office network. That ratio is why "connect several PCs" is not a strategy.
+| Link | Bandwidth | Where it is used |
+| --- | --- | --- |
+| NVLink | up to ~900 GB/s | GPU to GPU inside one chassis |
+| PCIe 5.0 ×16 | ~64 GB/s | GPU to host, and GPU to GPU without NVLink |
+| InfiniBand NDR | ~50 GB/s | Server to server in a purpose-built cluster |
+| 100 GbE | ~12 GB/s | Server to server, commodity networking |
+| 10 GbE | ~1.2 GB/s | An ordinary office network |
+
+NVLink is roughly **750 times faster** than an ordinary office network. That ratio is why
+"just connect several PCs" is not a strategy.
 
 ## Splitting a model across GPUs
 

@@ -22,7 +22,7 @@ The family tells you who built the model and what lineage it belongs to.
 | `llama`, `muse` | Meta | General purpose, large ecosystem |
 | `gemma` | Google | Efficiency at small sizes, multilingual |
 | `granite` | IBM | Structured output, enterprise tasks, Apache 2.0 |
-| `mistral`, `devstral`, `ministral` | Mistral | Efficiency, European provenance |
+| `mistral`, `devstral`, `ministral` | Mistral | Efficiency; built in Europe |
 | `nemotron` | NVIDIA | Agentic use, tuned for their own hardware |
 | `deepseek` | DeepSeek | Reasoning and code at very large scale |
 | `gpt-oss` | OpenAI | Open-weight reasoning models |
@@ -48,7 +48,7 @@ The part that is easiest to overlook and most expensive to get wrong.
 | `thinking`, `reasoning` | Emits a chain of internal reasoning before answering. | Hard problems. Costs many extra tokens and noticeable latency. |
 | `coder` | Specialised on code and on agentic software work. | Code. See [Chapter 9](/book/09-coding-and-editors). |
 | `vision`, `VL` | Accepts images alongside text. | Screenshots, diagrams, scanned documents. |
-| `embedding` | Outputs vectors rather than text. Not conversational at all. | Search and retrieval. See [Chapter 12](/book/12-what-to-learn-next). |
+| `embedding` | Outputs vectors rather than text. Not conversational at all. | Search and retrieval. See [Chapter 13](/book/13-your-own-data). |
 | `guard`, `guardian` | Classifiers that judge whether content is acceptable. | Filtering inputs and outputs in production. |
 | `distill` | A small model trained to imitate a larger one. | Punching above its weight on specific tasks. |
 

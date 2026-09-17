@@ -3,43 +3,50 @@ layout: home
 
 hero:
   name: Running Models Yourself
-  text: A field guide to language models on your own hardware
-  tagline: What the numbers mean, what the hardware does, and what it actually costs — from one laptop to a shared cluster.
+  text: Language models on your own hardware
+  tagline: What the numbers mean, what the hardware does, and what it costs — from one laptop to a shared cluster.
   actions:
     - theme: brand
       text: Start reading
       link: /book/01-what-a-model-is
     - theme: alt
-      text: Jump to the setup
+      text: Skip to the setup
       link: /book/06-the-first-run
+
+features:
+  - title: Part I — Foundations
+    details: What a model is. Why its size decides everything. What VRAM, bandwidth and tensor cores actually do.
+    link: /book/01-what-a-model-is
+    linkText: 4 chapters
+  - title: Part II — Getting hands on
+    details: Size up a machine, get a model running, give it tools, and learn to read a model name.
+    link: /book/05-the-reference-machine
+    linkText: 3 chapters
+  - title: Part III — The landscape
+    details: Every model from 1B to 1T, the hardware each one needs, and how open models compare to hosted ones.
+    link: /book/08-the-model-landscape
+    linkText: 2 chapters
+  - title: Part IV — Building infrastructure
+    details: Serving a whole team. Three builds with diagrams, costs, and the speed and context you can expect.
+    link: /book/10-from-one-user-to-many
+    linkText: 2 chapters
+  - title: Part V — Going further
+    details: Hardware beyond this book, teaching a model your own documents, and the security problems that follow.
+    link: /book/12-going-further
+    linkText: 3 chapters
 ---
 
-::: danger This book is AI-generated
-Drafted by a large language model, reviewed by a human. Not a human-written book that
-used AI for polish — the other way round.
+## The short version
 
-Some people and organisations reject AI-generated material on principle. **That is a
-legitimate position.** If it is yours, stop here.
+A model is a file of numbers. Running it is mostly a matter of moving those numbers out
+of memory fast enough. Almost everything else — which card to buy, how many people it can
+serve, what it costs — follows from that one idea.
 
-The reasoning has been checked and the arithmetic holds. The **numbers** — bandwidth
-figures, prices, model sizes — are the fragile part. Verify anything you are about to
-spend money on.
-:::
+This book works through it from the bottom up. You need no background in machine
+learning. If you can read a datasheet and use a terminal, that is enough.
 
-## What this is
+You will often hear that the good models cannot be run outside a datacenter. That is
+almost never true. It is a question of how much memory you are willing to buy, and the
+chapters ahead give you the arithmetic to work out the answer for any model and any
+machine.
 
-Twelve chapters on running language models on hardware you control. It builds from the
-bottom up — a model is a file of numbers, generation is memory movement — and everything
-else follows from those two facts.
-
-Read it in order. Each chapter assumes the one before it and nothing else. No machine
-learning knowledge required; if you can read a datasheet and drive a terminal, that is
-enough.
-
-The recurring theme: *"you cannot run that locally"* is almost never true. It is a
-question of how much memory you are willing to buy, and the book gives you the
-arithmetic to work it out for any model and any machine.
-
-It does not sell anything. Where local hardware loses to a hosted service, it says so.
-
-Corrections welcome — see [Contributing](/contributing).
