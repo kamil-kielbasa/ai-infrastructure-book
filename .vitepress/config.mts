@@ -1,15 +1,22 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 
+// GITHUB_REPOSITORY is "owner/name" in Actions. Deriving both the base path and
+// the repository links from it means renaming the repo cannot silently break the
+// published asset URLs; the fallbacks are only used for local development.
+const slug = process.env.GITHUB_REPOSITORY || 'kamil-kielbasa/ai-infrastructure-book'
+const name = slug.split('/')[1]
+const repoUrl = `https://github.com/${slug}`
+
 // withMermaid() wraps the config so ```mermaid fences render as diagrams
 // instead of code blocks.
 export default withMermaid(defineConfig({
   title: 'Running Models Yourself',
   description: 'A field guide to running language models on your own hardware',
 
-  // GitHub Pages serves this repo under /ai-infrastructure/. CI overrides it
-  // if the site ever moves to a custom domain.
-  base: process.env.DOCS_BASE || '/ai-infrastructure/',
+  // GitHub Pages serves a project site under /<repo>/. DOCS_BASE overrides this
+  // if the book ever moves to a custom domain.
+  base: process.env.DOCS_BASE || `/${name}/`,
 
   lastUpdated: true,
   cleanUrls: true,
@@ -73,11 +80,11 @@ export default withMermaid(defineConfig({
     ],
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/kamil-kielbasa/ai-infrastructure' }
+      { icon: 'github', link: repoUrl }
     ],
 
     editLink: {
-      pattern: 'https://github.com/kamil-kielbasa/ai-infrastructure/edit/main/:path',
+      pattern: `${repoUrl}/edit/main/:path`,
       text: 'Suggest a change to this page'
     },
 

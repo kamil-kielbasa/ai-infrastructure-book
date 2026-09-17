@@ -1,0 +1,24 @@
+version: 2
+updates:
+  # Action majors drift, and stale ones are what produce the Node runtime
+  # deprecation warnings in workflow logs.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      vitepress:
+        patterns:
+          - vitepress
+          - vitepress-*
+          - mermaid
