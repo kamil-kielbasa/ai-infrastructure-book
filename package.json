@@ -10,10 +10,10 @@
   },
   "devDependencies": {
     "markdown-it-mathjax3": "^5.2.0",
-    "vitepress": "2.0.0-alpha.15"
+    "vitepress": "2.0.0-alpha.20"
   },
   "dependencies": {
-    "mermaid": "^11.16.0",
+    "mermaid": "^12.0.0",
     "vitepress-plugin-mermaid": "^2.0.17"
   }
 }
