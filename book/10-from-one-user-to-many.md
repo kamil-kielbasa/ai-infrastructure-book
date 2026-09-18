@@ -108,9 +108,13 @@ Those last two rows are the context windows current models actually advertise
 card running a conventional 70B model cannot give a single user the window the model
 claims to support.
 
-**The escape is the model, not the card.** A model with compressed attention costs about
-890 bytes per token rather than 160 kilobytes. The same 56 GB pool then holds a 256K
-context for roughly 240 people, or a million-token context for sixty.
+**The escape is the model, not the card.** Architectures built for long context
+([Chapter 2](/book/02-size-and-memory)) cut the per-token cost by anything from a factor
+of four to a factor of a hundred, depending on which method they use. At the aggressive
+end the same 56 GB pool seats hundreds of people at 256K instead of one.
+
+That range is too wide to assume. Look the figure up for the specific model you intend
+to deploy before you size anything around it.
 
 ::: tip The trade nobody mentions
 With conventional attention, context length and user count are the same budget. You can
@@ -118,13 +122,39 @@ serve a lot of people with short contexts, or very few with long ones.
 
 If a team asks for both "a 256K window" and "everyone can use it at once", on a
 conventional model those are two different machines. On a model built for long context
-they are the same machine. Check which kind you are deploying before you price the
+they can be the same machine. Check which kind you are deploying before you price the
 hardware.
 :::
 
 A gentler option than buying more hardware: cap the configured context at what the work
 needs. Dropping from 128K to 32K on the example above takes the same card from two users
 to eleven.
+
+### Reusing the cache instead of recomputing it
+
+When many requests begin the same way — a long system prompt, a codebase, a document the
+whole team asks about — the cache for that shared opening can be computed once and reused
+rather than rebuilt per request. This is **prefix caching**, and every serious serving
+stack supports it.
+
+It can go further. Runtimes such as **LMCache**, which vLLM ships connectors for, keep
+those caches in tiers: GPU memory first, then system RAM, then a local SSD, then shared
+storage. A prefix that no longer fits on the card is fetched instead of recomputed.
+
+Be precise about what this buys, because it is routinely oversold:
+
+| | |
+| --- | --- |
+| **Improves** | Time to first token, dramatically, whenever a prefix repeats |
+| **Does not improve** | The context of the conversation happening right now |
+
+The active request's cache still has to sit in GPU memory. An SSD delivers a few
+gigabytes per second where GPU memory delivers hundreds, so nothing the model consults on
+*every* token can live on a disk. Offloading works precisely because the data it moves is
+cold — needed once at the start of a request, not continuously throughout it.
+
+So it is a strong answer to "fifty people share one long system prompt", and no answer at
+all to "I want a million-token conversation on a small card".
 
 ## Serving stacks
 
@@ -176,6 +206,72 @@ underneath.
 
 **Per-model deployments.** Serving three models from one process serves all three
 badly. Give each its own GPU or its own node, and route by model name at the gateway.
+
+## Beyond one card
+
+Once a deployment outgrows a single GPU, how the GPUs are wired starts to matter, and
+the differences span orders of magnitude.
+
+```mermaid
+flowchart TB
+    subgraph node1 [Server A]
+        direction LR
+        G1[GPU 0] <--> G2[GPU 1]
+        G2 <--> G3[GPU 2]
+        G3 <--> G4[GPU 3]
+    end
+    CPU[Host CPU and RAM]
+    subgraph node2 [Server B]
+        direction LR
+        H1[GPU 0] <--> H2[GPU 1]
+    end
+
+    node1 <--> CPU
+    node1 <--> node2
+```
+
+Inside a server the GPUs are joined by NVLink. Between servers they are joined by the
+network. The gap between those two is the whole point:
+
+| Link | Bandwidth | Where it is used |
+| --- | --- | --- |
+| NVLink | up to ~900 GB/s | GPU to GPU inside one chassis |
+| PCIe 5.0 ×16 | ~64 GB/s | GPU to host, and GPU to GPU without NVLink |
+| InfiniBand NDR | ~50 GB/s | Server to server in a purpose-built cluster |
+| ConnectX, 400G QSFP112 | ~50 GB/s | Joining small AI appliances directly |
+| 100 GbE | ~12 GB/s | Server to server, commodity networking |
+| 10 GbE | ~1.2 GB/s | An ordinary office network |
+
+NVLink is roughly **750 times faster** than an ordinary office network. That ratio is why
+"just plug several PCs into the office switch" is not a strategy — though the fourth row
+is a real exception, and [Chapter 11](/book/11-reference-architectures) prices it.
+
+### Splitting a model across GPUs
+
+Three ways, and they are not interchangeable.
+
+| Strategy | What it does | Interconnect required | Use for |
+| --- | --- | --- | --- |
+| **Tensor parallel** | Each layer is split across GPUs; they exchange data at every layer | NVLink. Very heavy traffic. | One model too large for one GPU, within a node |
+| **Pipeline parallel** | Different layers on different GPUs; activations pass along the chain | Tolerates slower links | Spanning nodes when unavoidable |
+| **Data parallel** | Full copy on each GPU; requests distributed between them | None — they never talk | **Throughput.** The usual answer. |
+
+::: tip The rule
+Tensor parallelism inside a node, data parallelism between nodes.
+
+Pipeline parallelism across a slow network is a last resort, chosen only when a model
+genuinely cannot fit any other way.
+:::
+
+::: warning Scale up before you scale out
+One box with one large GPU beats several boxes with small ones for speed, and for the
+amount of your life spent on it. Split a model across two machines joined by 10 GbE and
+intermediate results cross a 1.2 GB/s link on every token: the GPUs idle while the
+network works, and the result is routinely slower than a smaller model on one machine.
+
+Add machines to serve more users, or to hold a model that will not fit. Never add them
+to make one model faster.
+:::
 
 ## Measuring
 

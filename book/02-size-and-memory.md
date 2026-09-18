@@ -32,8 +32,8 @@ reads only a fraction of itself per token, and the arithmetic changes completely
 :::
 
 Hold on to this. It is the reason the next chapter is about memory rather than compute,
-and the reason [Chapter 11](/book/11-reference-architectures) recommends the hardware it
-does.
+and the reason every hardware recommendation later in this book starts with the same
+question: how fast can this machine move bytes?
 
 ## How fast is fast enough?
 
@@ -85,7 +85,7 @@ each. So a model's natural size is:
 
 $$\text{size} = \text{parameters} \times 2 \text{ bytes}$$
 
-A 4B model is 8 GB. A 70B model is 140 GB. A 671B model is 1.3 TB.
+A 4B model is 8 GB. A 70B model is 140 GB. A 763B model is 1.5 TB.
 
 Those numbers are why nobody runs models at full precision on their own hardware.
 
@@ -100,22 +100,7 @@ Instead of two bytes per parameter, you use roughly half a byte.
 By the formula above this buys two things at once. The model *fits*, and it runs about
 four times faster.
 
-### Reading the names
-
-Quantization formats look cryptic. They are mechanical:
-
-```
-Q4_K_M
-│ │ │
-│ │ └── M = Medium variant (S = Small, L = Large): how much precision
-│ │         is spent on the layers that matter most
-│ └──── K = "K-quant", a scheme that varies precision across the model
-│           rather than treating every layer identically
-└────── 4 = approximately 4 bits per parameter
-```
-
-Older formats use `_0` or `_1` in place of `_K_x` — `Q4_0`, `Q8_0`. Those are earlier,
-simpler schemes. Prefer `_K_` where both exist.
+### What each format costs
 
 | Format | Bits per parameter | GB per 1B parameters | When to use it |
 | --- | --- | --- | --- |
@@ -153,21 +138,11 @@ Cost per token depends on the model's internal shape:
 
 $$\text{bytes per token} = 2 \times \text{layers} \times \text{KV heads} \times \text{head size} \times \text{bytes per value}$$
 
-Every term is a number from the model's configuration file:
+Every term comes from the model's configuration file. For a typical 8B model this gives
+$2 \times 32 \times 8 \times 128 \times 1 = 65{,}536$ bytes — 64 KB for every token in
+the conversation.
 
-| Term | What it is | Typical value |
-| --- | --- | --- |
-| **2** | There are two things to store per position, a *key* and a *value* — hence "KV cache" | always 2 |
-| **layers** | A model is a stack of identical blocks. Each keeps its own notes. | 32 for an 8B model, 80 for a 70B one |
-| **KV heads** | Inside each layer, attention is split into parallel "heads". Modern models let several heads share one set of notes, which is why this number is small. | 8 is common |
-| **head size** | How many numbers each head stores per position | 128 is common |
-| **bytes per value** | The precision the cache is stored at — the same choice as quantization, applied to the notes rather than the weights | 1 at 8-bit, 2 at 16-bit |
-
-So for a typical 8B model: $2 \times 32 \times 8 \times 128 \times 1 = 65{,}536$ bytes, or
-64 KB for every token in the conversation.
-
-You rarely need to compute this. These are the figures for typical modern models, storing
-the cache at 8-bit:
+You rarely need to compute it. For typical models, storing the cache at 8-bit:
 
 | Model size | Cache per 1,000 tokens | 256K context | 1M context |
 | --- | --- | --- | --- |
@@ -176,96 +151,44 @@ the cache at 8-bit:
 | 70B | ~160 MB | 42 GB | 164 GB |
 | 120B | ~220 MB | 58 GB | 220 GB |
 
-Approximate, and — as the next section explains — increasingly pessimistic.
-Architectures differ, and a model card gives you the exact shape.
+Read the last column carefully. A 70B model's weights come to about 39 GB at Q4, so a
+**one-million-token context costs four times more memory than the model itself.**
 
-Read the last column carefully. A 70B model's weights come to about 39 GB at Q4. On this
-arithmetic, giving it a **one-million-token context costs four times more memory than
-the model itself.**
+### Why that table is an upper bound
 
-### That arithmetic is the classical case
+It assumes every layer keeps a full set of keys and values for every token. That was
+universally true until recently and still describes most models you will download. The
+rest attack the cost directly, and the methods are worth recognising by name:
 
-Every figure in the table assumes each layer keeps a full set of keys and values for
-every token. This was universally true until recently, and it remains true of most
-models you will download today.
-
-The newest models do something different, and the difference is not incremental.
-DeepSeek-V4.1-Flash stores its global KV cache in **890 bytes per token**.
-
-Set that against the table above, where a 70B model spends roughly 160,000 bytes per
-token, and run both out to a million-token context:
-
-| Model | Cache per token | Cache at 1M tokens |
-| --- | --- | --- |
-| Classical 70B | ~160 KB | **164 GB** |
-| DeepSeek-V4.1-Flash | 890 B | **0.89 GB** |
-
-A million tokens of context, in under a gigabyte. DeepSeek reports this as about a
-four-fold improvement on its own previous generation, and a **437-fold** improvement on
-DeepSeek-V1.
-
-Several techniques stacked together get you there. The names are worth recognising even
-if the details are not: a **causal encoder-decoder** split, where the decoder projects
-one global cache from the encoder's final state instead of every layer keeping its own;
-**compressed sparse attention**, where layers share indices rather than each computing
-its own; and storing the cache itself at **FP4**.
-
-::: warning This is the fastest-moving number in the book
-An order of magnitude is not a tuning detail — it decides which machine you buy. A
-purchase justified by "we need a million tokens of context" may not survive contact with
-a model released next quarter.
-
-Treat the table above as an **upper bound**, then read the model card.
-
-- Ordinary attention — the table is accurate.
-- Compressed, latent, or sparse attention — the real figure can be a hundred times
-  lower.
-:::
-
-### Spilling the cache to RAM and disk
-
-There is a second escape route, and it is production software rather than a research
-curiosity. A runtime can hold the KV cache in tiers: GPU memory first, then CPU RAM,
-then a local SSD, then shared storage across the network. **LMCache** does exactly this,
-and vLLM ships connectors for it.
-
-It is genuinely useful and very commonly misunderstood, so be precise about what it buys:
-
-| | |
+| Method | What it does |
 | --- | --- |
-| **What it does** | Keeps caches from *earlier* requests, so a repeated prefix is never processed twice. A long system prompt, a codebase, a document the whole team asks about — processed once, reused many times. |
-| **What it improves** | Time to first token, dramatically, whenever a prefix repeats. |
-| **What it does not do** | Extend the context of the conversation you are having right now. The active request's cache still has to sit in GPU memory. |
+| **Grouped-query attention** | Several heads share one set of notes. Near-universal now, and already assumed in the table above. |
+| **Sliding-window attention** | Only recent tokens stay at full resolution; older ones are summarised or dropped. |
+| **Latent or compressed attention** | Stores a smaller projection of the keys and values instead of the full pair. |
+| **Linear or hybrid attention** | Replaces most of the growing cache with a fixed-size running state, closer to an RNN than to classical attention. |
+| **Cache quantization** | Stores the cache itself at 8, 4 or fewer bits. |
 
-The reason is the same arithmetic as everywhere else in this chapter. An SSD delivers a
-few gigabytes per second; GPU memory delivers hundreds. Nothing the model consults on
-*every* token can live on a disk. Offloading works precisely because the data it moves is
-cold — needed once at the start of a request, not continuously throughout it.
+Real models combine several of these. The saving runs from roughly **four times** at the
+conservative end to around **a hundred times** for the most aggressive designs.
 
-So it is a strong answer to "fifty people share one long system prompt", and no answer
-at all to "I want a million-token conversation on a small card".
+::: warning Do not assume either extreme
+That range is far too wide to guess at. A model designed for long context makes a
+million-token window nearly free; a conventional one makes it cost more than the weights.
+Both are on offer today, and the difference decides what you have to buy.
 
-::: warning Long context is still a hardware purchase
-Hosted services advertise windows of 200K or a million tokens. Those numbers are real,
-and someone is paying for the memory that holds them — multiplied by every user served
-at the same time ([Chapter 10](/book/10-from-one-user-to-many)).
-
-Compression and offloading have moved that price a long way down. Neither has made it
-zero.
+The table above is the safe upper bound. The model card is the real answer.
 :::
 
 ### What to do about it
 
 - **Store the cache at 8-bit.** It halves the cost against the 16-bit default, with no
-  quality loss you will notice. Most runtimes support this with one setting.
-- **Ask for the context you actually use.** Most work fits in 8K–32K. Reserving 128K
-  "just in case" spends memory every second the model is loaded.
-- **Check the model's real limit.** A model advertised with a 128K window is often
-  trained well for far less, and quality degrades in the upper range.
-- **If you need long context, choose the architecture for it.** Picking a model with
-  compressed attention saves more memory than every other item on this list combined.
-- **Turn on prefix caching when prompts repeat.** It costs nothing and removes the
-  dominant share of the waiting in most team deployments.
+  quality loss you will notice. One setting in most runtimes.
+- **Ask for the context you actually use.** Reserving a large window "just in case"
+  spends memory every second the model is loaded.
+- **Check the model's real limit.** An advertised window is an upper bound, not a
+  promise of quality; many models degrade well before it.
+- **If you need long context, choose the architecture for it.** This saves more than
+  everything else on this list combined.
 
 ## The memory budget
 

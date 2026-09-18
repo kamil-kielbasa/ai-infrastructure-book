@@ -1,14 +1,12 @@
-# 15. Closing
+# 13. Closing
 
-Fourteen chapters, and most of it follows from three ideas. If you remember nothing else,
+Twelve chapters, and most of it follows from three ideas. If you remember nothing else,
 remember these.
 
 ## A model is a file of numbers
 
 Everything a model appears to know is encoded in a fixed set of parameters. It is not
-looking anything up. That is why it can be fluent and wrong at the same time, and why
-teaching it your material means putting that material in front of it
-([Chapter 12](/book/12-your-own-data)) rather than trying to push it into the weights.
+looking anything up. That is why it can be fluent and wrong at the same time.
 
 ## Running one is a memory problem
 
@@ -39,19 +37,33 @@ need to buy.
 | If you want | Then |
 | --- | --- |
 | To learn what these models can do | One consumer GPU and an afternoon ([Chapter 6](/book/06-the-first-run)) |
-| To make it useful at work | Retrieval, not fine-tuning ([Chapter 12](/book/12-your-own-data)) |
 | To share it with a team | Different software, not just a bigger card ([Chapter 10](/book/10-from-one-user-to-many)) |
 | To know whether any of it works | Running candidates on tasks you actually do, and reading the answers |
 | To scale beyond one machine | One large GPU before several small ones ([Chapter 11](/book/11-reference-architectures)) |
+
+## Two things this book left out
+
+Both are cheap wins you will meet in any serious deployment.
+
+**Prefix caching.** When many requests begin the same way, the cache for that shared
+opening is computed once and reused rather than recomputed per request.
+
+**Speculative decoding.** A small fast model drafts several tokens; the large model
+checks them in one pass and keeps what it agrees with. Faster output, same quality.
+
+Beyond those, larger deployments split prompt-reading and answer-writing across separate
+machines, and treat model versions as deployed artefacts to be pinned and rolled back.
+All of it is real. None of it belongs in a first build.
 
 ## The claim this book started with
 
 That "you cannot run that locally" is almost never true.
 
-It holds up. The largest open model in existence fits in one desktop machine you can buy
-today. What is true instead is narrower and more useful: *not at that speed, not for that
-many people, not at that price.* Those are answerable questions, and you now have the
-arithmetic to answer them.
+It holds up. Models of several hundred billion parameters run on a single desktop
+machine you can order today, and the largest need a handful of small boxes and a fast
+cable rather than a server room. What is true instead is narrower and more useful:
+*not at that speed, not for that many people, not at that price.* Those are answerable
+questions, and you now have the arithmetic to answer them.
 
 ## And the honest limit
 

@@ -71,13 +71,11 @@ export default withMermaid(defineConfig({
         ]
       },
       {
-        text: 'Part V — Going further',
+        text: 'Part V — In practice',
         collapsed: false,
         items: [
-          { text: '12. Teaching a model your data', link: '/book/12-your-own-data' },
-          { text: '13. Security', link: '/book/13-security' },
-          { text: '14. Hardware beyond this book', link: '/book/14-going-further' },
-          { text: '15. Closing', link: '/book/15-closing' }
+          { text: '12. Security', link: '/book/12-security' },
+          { text: '13. Closing', link: '/book/13-closing' }
         ]
       }
     ],

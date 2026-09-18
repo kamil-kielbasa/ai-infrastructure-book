@@ -30,10 +30,10 @@ features:
     details: Serving a whole team. Three builds with diagrams, costs, and the speed and context you can expect.
     link: /book/10-from-one-user-to-many
     linkText: 2 chapters
-  - title: Part V — Going further
-    details: Teaching a model your own documents, the security problems that follow, and where the hardware goes next.
-    link: /book/12-your-own-data
-    linkText: 4 chapters
+  - title: Part V — In practice
+    details: The security problems that arrive with the first agent, and the three ideas worth keeping.
+    link: /book/12-security
+    linkText: 2 chapters
 ---
 
 ## The short version

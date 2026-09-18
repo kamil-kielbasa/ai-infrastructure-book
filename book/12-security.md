@@ -1,4 +1,4 @@
-# 13. Security
+# 12. Security
 
 How these systems get attacked, and what to do about it. Easy to postpone, expensive to
 retrofit.
@@ -88,9 +88,7 @@ Check both before anything reaches a product.
 
 1. Work through [Chapter 6](/book/06-the-first-run), including the model comparison at
    the end.
-2. Drop a document into a chat and ask about it — retrieval at its simplest
-   ([Chapter 12](/book/12-your-own-data)).
-3. Connect a model to your editor ([Chapter 9](/book/09-coding-and-editors)) and try real
+2. Connect a model to your editor ([Chapter 9](/book/09-coding-and-editors)) and try real
    work. Note where it falls short.
-4. Read about prompt injection again before giving any agent access to anything that
+3. Read about prompt injection again before giving any agent access to anything that
    matters.

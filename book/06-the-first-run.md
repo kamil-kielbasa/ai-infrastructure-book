@@ -163,7 +163,7 @@ instructions and instead…"*, and models frequently comply.
 
 This is a real and unsolved class of attack. Treat any agent with web access as
 untrusted. Never give it credentials that matter, and think carefully before enabling
-shell or filesystem tools. See [Chapter 13](/book/13-security).
+shell or filesystem tools. See [Chapter 12](/book/12-security).
 :::
 
 ## Step 5 — The comparison worth making

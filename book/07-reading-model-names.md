@@ -48,7 +48,7 @@ The part that is easiest to overlook and most expensive to get wrong.
 | `thinking`, `reasoning` | Emits a chain of internal reasoning before answering. | Hard problems. Costs many extra tokens and noticeable latency. |
 | `coder` | Specialised on code and on agentic software work. | Code. See [Chapter 9](/book/09-coding-and-editors). |
 | `vision`, `VL` | Accepts images alongside text. | Screenshots, diagrams, scanned documents. |
-| `embedding` | Outputs vectors rather than text. Not conversational at all. | Search and retrieval. See [Chapter 12](/book/12-your-own-data). |
+| `embedding` | Outputs vectors rather than text. Not conversational at all. | Search and retrieval. A different job from generation. |
 | `guard`, `guardian` | Classifiers that judge whether content is acceptable. | Filtering inputs and outputs in production. |
 | `distill` | A small model trained to imitate a larger one. | Punching above its weight on specific tasks. |
 
@@ -68,8 +68,23 @@ if the distinction matters, and it usually does.
 
 ## Quantization
 
-Covered in [Chapter 2](/book/02-size-and-memory). If the name carries no quantization
-suffix, tooling generally defaults to Q4_K_M.
+The suffix is mechanical:
+
+```
+Q4_K_M
+│ │ │
+│ │ └── M = Medium variant (S = Small, L = Large): how much precision
+│ │         is spent on the layers that matter most
+│ └──── K = "K-quant", a scheme that varies precision across the model
+│           rather than treating every layer identically
+└────── 4 = approximately 4 bits per parameter
+```
+
+Older formats use `_0` or `_1` in place of `_K_x` — `Q4_0`, `Q8_0`. Those are earlier,
+simpler schemes; prefer `_K_` where both exist.
+
+What each format costs in memory is in [Chapter 2](/book/02-size-and-memory). If a name
+carries no quantization suffix, tooling generally defaults to Q4_K_M.
 
 ## Capability tags
 
