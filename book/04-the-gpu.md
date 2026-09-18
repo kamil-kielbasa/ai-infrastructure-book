@@ -10,18 +10,24 @@ subtle.
 
 ```mermaid
 flowchart TB
-    subgraph gpu [Graphics card]
-        V["VRAM — 4 to 141 GB<br/>200 to 4,800 GB/s"]
-    end
-    subgraph host [Motherboard]
-        R["System RAM — 16 to 2,000 GB<br/>50 to 100 GB/s"]
-        D["SSD — terabytes<br/>2 to 14 GB/s"]
-    end
-    V <-->|"PCIe — 32 to 128 GB/s"| R
+    V[VRAM<br/>on the graphics card]
+    R[System RAM<br/>on the motherboard]
+    D[SSD]
+    V <--> R
     R <--> D
 ```
 
-Two things to read off this diagram.
+The three levels differ enormously, and the link between the top two is itself a
+bottleneck:
+
+| Level | Capacity | Speed |
+| --- | --- | --- |
+| VRAM | 4–141 GB | 200–4,800 GB/s |
+| PCIe, the link between them | — | 32–128 GB/s |
+| System RAM | 16–2,000 GB | 50–100 GB/s |
+| SSD | terabytes | 2–14 GB/s |
+
+Two things to read off this.
 
 **VRAM is roughly four to fifty times faster than system RAM.** That ratio, far more
 than any difference in arithmetic capability, is why models run on graphics cards.
@@ -32,10 +38,10 @@ partial fit performs much closer to the slow side than to the fast one.
 
 ## VRAM
 
-**VRAM** is memory soldered onto the graphics card, dedicated to the GPU and physically
-separate from system RAM. The two are not interchangeable and they do not add up. A
-machine with 4 GB of VRAM and 32 GB of system RAM does not have 36 GB available to a
-model.
+**VRAM** — video RAM — is memory soldered onto the graphics card, dedicated to the GPU and
+physically separate from system RAM. The two are not interchangeable and they do not add
+up: a machine with 8 GB of VRAM and 64 GB of system RAM does not have 72 GB available to
+a model.
 
 VRAM capacity is a **hard wall**. A model either fits or it does not. When it does not,
 one of two things happens:
@@ -43,8 +49,8 @@ one of two things happens:
 - the software refuses to load it, or
 - it splits the model between VRAM and system RAM, and the slow side dominates.
 
-This is why a 4 GB card cannot run a 13B model *at all well*, no matter how modern it
-is. There is nowhere to put the weights.
+This is why a small card cannot run a large model *at all well*, no matter how modern the
+card is. There is nowhere to put the weights.
 
 ## Bandwidth
 
@@ -80,12 +86,12 @@ confusing advice about AI hardware comes from conflating them.
 
 ```mermaid
 flowchart LR
-    P["<b>Prefill</b><br/>Read the prompt<br/>All tokens at once<br/><i>Compute bound</i>"] --> D["<b>Decode</b><br/>Generate the answer<br/>One token at a time<br/><i>Bandwidth bound</i>"]
+    P[Prefill<br/>reads the prompt] --> D[Decode<br/>writes the answer]
 ```
 
 | Phase | What happens | Limited by | What you perceive |
 | --- | --- | --- | --- |
-| **Prefill** | The model reads your input. Every token is processed in parallel, so this is a large matrix multiplication. | **Compute** (FLOPS) | The pause before the first word |
+| **Prefill** | The model reads your input. Every token is processed in parallel, so this is one large matrix multiplication. | **Compute** | The pause before the first word |
 | **Decode** | Tokens are produced one at a time, each requiring a full pass over the weights. | **Memory bandwidth** | The words appearing |
 
 This distinction resolves the contradiction you will otherwise keep hitting: a machine
@@ -111,22 +117,38 @@ Long prompts, short answers — summarisation, code analysis, retrieval, agents 
 prefill-heavy. Optimise compute.
 :::
 
-## Compute and tensor cores
+## Compute, and the number that measures it
 
-**Tensor cores** are dedicated matrix-multiplication units. They are what makes prefill
-fast, and their generation matters: each of Ampere, Ada, Hopper and Blackwell brought
-substantial gains for the numeric formats inference uses.
+Bandwidth had a clear unit — gigabytes per second. "Compute" needs the same treatment,
+because it is the term people wave at without saying what it is.
 
-Compute is quoted in **TFLOPS** — trillions of floating-point operations per second.
-Read these numbers with suspicion. Vendors routinely quote figures "with sparsity",
-which doubles the headline and does not apply to normal inference, and they quote
-low-precision formats such as FP4 which not all software can use. Compare like with
-like, and halve any number marked with an asterisk.
+**Compute is measured in TFLOPS**: trillions of floating-point operations per second. It
+is the rate at which the card can multiply numbers together, and it is what sets prefill
+speed. Where bandwidth answers "how fast can the card *fetch* the model", compute answers
+"how fast can the card *do arithmetic* with it".
 
-**Compute capability** is NVIDIA's version number for a GPU's feature set — 8.6 for
-Ampere-generation workstation cards, 9.0 for Hopper, 12.0 for Blackwell. Software
-checks it to decide which code paths are available. Most inference tooling requires 5.0
-or higher, which means anything from roughly 2014 onward qualifies.
+The work is done by **tensor cores** — units built specifically for the matrix
+multiplications that neural networks consist of. Their generation matters: Ampere, Ada,
+Hopper and Blackwell each brought substantial gains.
+
+::: warning Two different numbers, confusingly similar names
+**Compute** (TFLOPS) is a *speed*. Bigger is faster. An H100 is around 990 TFLOPS, a
+high-end workstation card around 250.
+
+**Compute capability** (8.6, 9.0, 12.0) is a *version number* for the card's feature set.
+It says nothing whatsoever about speed — it only tells software which instructions the
+card understands. A brand-new slow card has a higher compute capability than an old fast
+one.
+
+When sizing hardware you want the first. You only look up the second to check that your
+software will run at all; most inference tooling needs 5.0 or higher, which covers
+anything from roughly 2014 onward.
+:::
+
+Read TFLOPS figures with suspicion. Vendors routinely quote them "with sparsity", which
+doubles the headline and does not apply to ordinary inference, and they quote
+low-precision formats such as FP4 that not all software can use. Compare like with like,
+and halve any number carrying an asterisk.
 
 ## Unified memory
 

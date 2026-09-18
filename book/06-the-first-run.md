@@ -7,11 +7,13 @@ fifteen minutes plus download time.
 
 ```mermaid
 flowchart LR
-    U[Browser] -->|:3000| W[Open WebUI<br/>chat interface]
-    W -->|":11434<br/>OpenAI-compatible API"| O[Ollama<br/>model runtime]
-    O --> G[(GPU / VRAM)]
-    W -.->|web search| I([Internet])
+    U[Browser] --> W[Open WebUI]
+    W --> O[Ollama]
+    O --> G[(GPU)]
+    W -.-> I([Web search])
 ```
+
+The browser reaches Open WebUI on port 3000; Open WebUI reaches Ollama on port 11434.
 
 Two components. **Ollama** loads models onto the GPU and exposes an HTTP API.
 **Open WebUI** is a browser front-end that talks to it. They are separate on purpose:
@@ -161,7 +163,7 @@ instructions and instead…"*, and models frequently comply.
 
 This is a real and unsolved class of attack. Treat any agent with web access as
 untrusted. Never give it credentials that matter, and think carefully before enabling
-shell or filesystem tools. See [Chapter 13](/book/13-security-and-evaluation).
+shell or filesystem tools. See [Chapter 13](/book/13-security).
 :::
 
 ## Step 5 — The comparison worth making

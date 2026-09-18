@@ -75,7 +75,7 @@ export default withMermaid(defineConfig({
         collapsed: false,
         items: [
           { text: '12. Teaching a model your data', link: '/book/12-your-own-data' },
-          { text: '13. Security and evaluation', link: '/book/13-security-and-evaluation' },
+          { text: '13. Security', link: '/book/13-security' },
           { text: '14. Hardware beyond this book', link: '/book/14-going-further' },
           { text: '15. Closing', link: '/book/15-closing' }
         ]

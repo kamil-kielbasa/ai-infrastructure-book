@@ -64,10 +64,10 @@ predicts one token, appends it, and reads everything again.
 
 ```mermaid
 flowchart LR
-    A[Prompt] --> B[Read the whole<br/>sequence]
-    B --> C[Predict the<br/>next token]
+    A[Prompt] --> B[Read everything<br/>so far]
+    B --> C[Predict one token]
     C --> D[Append it]
-    D --> E{Finished?}
+    D --> E{Done?}
     E -->|No| B
     E -->|Yes| F[Answer]
 ```

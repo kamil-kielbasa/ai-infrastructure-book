@@ -153,7 +153,20 @@ Cost per token depends on the model's internal shape:
 
 $$\text{bytes per token} = 2 \times \text{layers} \times \text{KV heads} \times \text{head size} \times \text{bytes per value}$$
 
-You rarely need to compute it. These are the figures for typical modern models, storing
+Every term is a number from the model's configuration file:
+
+| Term | What it is | Typical value |
+| --- | --- | --- |
+| **2** | There are two things to store per position, a *key* and a *value* — hence "KV cache" | always 2 |
+| **layers** | A model is a stack of identical blocks. Each keeps its own notes. | 32 for an 8B model, 80 for a 70B one |
+| **KV heads** | Inside each layer, attention is split into parallel "heads". Modern models let several heads share one set of notes, which is why this number is small. | 8 is common |
+| **head size** | How many numbers each head stores per position | 128 is common |
+| **bytes per value** | The precision the cache is stored at — the same choice as quantization, applied to the notes rather than the weights | 1 at 8-bit, 2 at 16-bit |
+
+So for a typical 8B model: $2 \times 32 \times 8 \times 128 \times 1 = 65{,}536$ bytes, or
+64 KB for every token in the conversation.
+
+You rarely need to compute this. These are the figures for typical modern models, storing
 the cache at 8-bit:
 
 | Model size | Cache per 1,000 tokens | 32K context | 128K context | 1M context |
@@ -205,8 +218,9 @@ A worked example. A 7B model at Q4_K_M with an 8,000-token context:
 | Runtime overhead | ~0.3 GB |
 | **Total** | **~4.7 GB** |
 
-Which is why a 7B model does not fit on a card with 4 GB, even though 7 × 0.55 = 3.9
-suggests it should. The margin matters.
+Note the gap between 3.9 and 4.7. Sizing a machine from the weights alone understates the
+requirement by around a fifth, and that margin is what turns a model that looked like it
+would fit into one that does not load.
 
 ## What this means going forward
 

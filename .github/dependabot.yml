@@ -22,3 +22,11 @@ updates:
           - vitepress
           - vitepress-*
           - mermaid
+    ignore:
+      # mermaid 12 mis-measures node heights and clips wrapped labels;
+      # markdown-it-mathjax3 5 emits its stylesheet HTML-escaped into the page.
+      # Both are pinned. Re-test the diagrams and formulas before unpinning.
+      - dependency-name: mermaid
+        update-types: [version-update:semver-major]
+      - dependency-name: markdown-it-mathjax3
+        update-types: [version-update:semver-major]

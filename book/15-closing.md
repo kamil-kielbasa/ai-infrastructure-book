@@ -41,7 +41,7 @@ need to buy.
 | To learn what these models can do | One consumer GPU and an afternoon ([Chapter 6](/book/06-the-first-run)) |
 | To make it useful at work | Retrieval, not fine-tuning ([Chapter 12](/book/12-your-own-data)) |
 | To share it with a team | Different software, not just a bigger card ([Chapter 10](/book/10-from-one-user-to-many)) |
-| To know whether any of it works | Twenty test cases of your own ([Chapter 13](/book/13-security-and-evaluation)) |
+| To know whether any of it works | Running candidates on tasks you actually do, and reading the answers |
 | To scale beyond one machine | One large GPU before several small ones ([Chapter 11](/book/11-reference-architectures)) |
 
 ## The claim this book started with

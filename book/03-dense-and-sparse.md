@@ -11,23 +11,16 @@ many specialised sub-networks called experts. For each token, a small router sel
 few of them and ignores the rest.
 
 ```mermaid
-flowchart TB
-    subgraph dense [Dense model]
-        direction TB
-        DT[Token] --> DA[All parameters<br/>read and used]
-        DA --> DO[Output]
-    end
-
-    subgraph moe [Mixture of Experts]
-        direction TB
-        MT[Token] --> R[Router]
-        R -->|selected| E1[Expert 3]
-        R -->|selected| E2[Expert 17]
-        R -.->|skipped| E3[Expert 1 ... 128]
-        E1 --> MO[Output]
-        E2 --> MO
-    end
+flowchart LR
+    T[Token] --> R[Router]
+    R --> E1[Expert 3]
+    R --> E2[Expert 17]
+    R -.-> E3[The other 126<br/>experts, skipped]
+    E1 --> O[Output]
+    E2 --> O
 ```
+
+A dense model has no router and no experts: every token goes through the whole thing.
 
 You will see this written as **30B-A3B**: thirty billion parameters in total, of which
 about three billion are *active* per token.

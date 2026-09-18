@@ -11,7 +11,7 @@ determines generation speed, and compute because it determines prompt processing
 
 | Device | Memory | Bandwidth | FP16 compute | Price (EUR) |
 | --- | --- | --- | --- | --- |
-| RTX A2000 Mobile | 4 GB GDDR6 | ~190 GB/s | ~40 TFLOPS | in-laptop |
+| Laptop workstation GPU | 4 GB GDDR6 | ~190 GB/s | ~40 TFLOPS | in-laptop |
 | RTX 4090 | 24 GB GDDR6X | ~1,010 GB/s | ~165 TFLOPS | ~2,000 |
 | RTX 5090 | 32 GB GDDR7 | ~1,790 GB/s | ~210 TFLOPS | 2,500–3,000 |
 | RTX PRO 6000 Blackwell | 96 GB GDDR7 | ~1,790 GB/s | ~250 TFLOPS | 8,000–10,000 |
@@ -242,6 +242,42 @@ A 3 kW workstation build plugs into a normal circuit and survives on room air. T
 difference alone frequently decides the question, because the datacenter option is not
 "the same thing but more expensive" — it is a building project.
 
+### What to expect from it
+
+The same arithmetic as Architecture B, applied to both builds. Taking the largest model
+each can hold, and reserving the rest for the cache pool:
+
+**Budget build — 384 GB, running `llama4` 400B-A17B (220 GB of weights, ~160 GB left):**
+
+| Configured context | Users served at once | Wait before the first word, 32K prompt |
+| --- | --- | --- |
+| 8K | ~110 | ~2 seconds |
+| 32K | ~28 | ~7 seconds |
+| 128K | ~7 | ~30 seconds |
+
+**Datacenter build — 640 GB, running `deepseek-v3` 671B-A37B (369 GB of weights,
+~270 GB left):**
+
+| Configured context | Users served at once | Wait before the first word, 32K prompt |
+| --- | --- | --- |
+| 8K | ~130 | ~2 seconds |
+| 32K | ~33 | ~7 seconds |
+| 128K | ~8 | ~28 seconds |
+
+Two things to read from this.
+
+**Capacity is similar; the models are not.** Both builds serve roughly the same number of
+people, because the larger model eats the extra memory. What the datacenter build buys is
+a *better* model at that capacity, not more seats.
+
+**Prompt-reading is where they separate.** The figures above assume enough cards to hold
+the model; on the budget build that means splitting it across all four over PCIe, which
+costs speed that NVLink would not. For chat the difference barely shows. For long prompts
+and agents it compounds on every step.
+
+If your teams need a capable model rather than the most capable one, the budget build
+does the same job for a fifth of the money. That is the honest summary of this section.
+
 ### What each runs
 
 | Build | Can hold | Typical deployment |
@@ -251,7 +287,8 @@ difference alone frequently decides the question, because the datacenter option 
 
 With four cards, the common arrangement is not one enormous model but several useful
 ones: a large general model on two cards, a coding model on a third, an embedding model
-on the fourth.
+on the fourth. That also sidesteps the interconnect problem entirely, since separate
+models never need to talk to each other.
 
 ### Renting
 
@@ -332,35 +369,6 @@ speed, and for the amount of your life spent on it.
 Add machines to serve *more users*, never to make *one model* faster.
 :::
 
-## When it goes wrong
-
-The architectures above describe a system running normally. Four things go wrong often
-enough to plan for.
-
-**The model stops fitting after an update.** A new release of the same model can be
-larger, or default to a longer context, and it no longer loads. This is the most common
-production surprise, and the fix is boring: pin model versions, and test an upgrade on a
-spare card before rolling it out.
-
-**Memory runs out mid-request.** The cache pool fills, and instead of one slow request
-you get failures across every user on that card. Serving stacks let you cap the number of
-concurrent sequences and the maximum context; set both below what the hardware can
-actually take, and it degrades into queueing rather than errors.
-
-**A card fails in a multi-card node.** If several models run independently on separate
-cards, you lose one model and the rest continue. If one model is split across all the
-cards, you lose everything on that node. This is an argument for independent models per
-card that rarely comes up in the capacity discussion.
-
-**The driver breaks after a routine update.** A kernel or driver upgrade that does not
-match leaves the GPU invisible, and inference silently falls back to the CPU — twenty
-times slower, no error message ([Chapter 6](/book/06-the-first-run)). Hold GPU driver
-packages at a known-good version and upgrade them deliberately.
-
-The pattern in all four: failures here are usually **silent or delayed**, not loud. Alert
-on what `ollama ps` or your serving stack reports about device placement, not just on
-whether the process is alive.
-
 ## How long it takes to start
 
 One number that never appears in a specification and surprises everyone:
@@ -430,7 +438,7 @@ ordinary Linux administration; nothing here needs a machine learning background.
 | Task | How often | What it involves |
 | --- | --- | --- |
 | Watching capacity | Weekly | Reading the four metrics from [Chapter 10](/book/10-from-one-user-to-many); noticing the cache pool saturating before users complain |
-| Model updates | Monthly-ish | Testing a new release against your evaluation set ([Chapter 13](/book/13-security-and-evaluation)), then swapping it in |
+| Model updates | Monthly-ish | Checking a new release behaves on your own tasks before swapping it in |
 | Driver and stack upgrades | Quarterly | The riskiest routine task, because a bad driver fails quietly |
 | Access and quotas | Ongoing | Adding people, adjusting limits, answering "why is it slow today" |
 | Incidents | Unpredictable | Usually one of the four failures above |

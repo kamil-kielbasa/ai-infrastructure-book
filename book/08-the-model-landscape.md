@@ -242,23 +242,23 @@ larger than the difference in benchmark scores suggests.
 Public benchmarks leak into training data, and vendors optimise for them. A model can
 score well and still disappoint on your work.
 
-Use them for one thing only: a rough shortlist of what is worth testing. The comparison
-that decides anything is your own, against tasks you actually do —
-[Chapter 13](/book/13-security-and-evaluation#evaluation) explains how to build that.
+Use them for one thing only: a rough shortlist of what is worth testing. What decides
+anything is running the candidates on tasks you actually do, and comparing the answers
+yourself.
 
 ## Choosing
 
 ```mermaid
-flowchart TB
-    S{What is the task?} --> A[Classification,<br/>extraction, routing]
-    S --> B[General assistant,<br/>chat, drafting]
-    S --> C[Agentic coding,<br/>multi-step work]
-    S --> D[Maximum capability,<br/>data cannot leave]
-
-    A --> A1["1–4B<br/>Tier 0"]
-    B --> B1["9–30B<br/>Tier 1"]
-    C --> C1["30–120B<br/>Tier 2"]
-    D --> D1["400B+<br/>Tier 3b / 4"]
+flowchart LR
+    S{What is the task?}
+    S --> A[Classification<br/>or extraction]
+    S --> B[General assistant]
+    S --> C[Agentic coding]
+    S --> D[Maximum capability]
+    A --> A1[1 to 4B<br/>Tier 0]
+    B --> B1[9 to 30B<br/>Tier 1]
+    C --> C1[30 to 120B<br/>Tier 2]
+    D --> D1[400B and up<br/>Tier 3 or 4]
 ```
 
 Two rules that survive every change in the model landscape:

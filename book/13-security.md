@@ -1,7 +1,7 @@
-# 13. Security and evaluation
+# 13. Security
 
-Two subjects that are easy to postpone and expensive to retrofit. The first is how these
-systems get attacked. The second is how you tell whether yours is any good.
+How these systems get attacked, and what to do about it. Easy to postpone, expensive to
+retrofit.
 
 ## Prompt injection
 
@@ -84,51 +84,6 @@ research-only model produces a research-only model, however much work you added.
 
 Check both before anything reaches a product.
 
-## Evaluation
-
-Everything above assumes you can tell whether your system works. Most teams cannot, and
-it matters more than anything else on this list.
-
-### Why benchmarks will not tell you
-
-Public benchmarks leak into training data, and vendors optimise for them. A model can top
-a leaderboard and disappoint on your work, because your work is not the benchmark.
-
-They are useful for one thing only: a rough shortlist of which models are worth testing.
-
-### Build your own set
-
-Write down twenty tasks representative of what you actually do, with the answer you would
-accept for each. That is a day of work, and it will outlast every model named in this
-book.
-
-With it you can answer questions you otherwise can only guess at:
-
-- Is the new model better than the old one *for us*?
-- Did that prompt change help, or just feel better?
-- Can we drop to a smaller model and save half the hardware?
-- Has quality drifted since the upgrade?
-
-### Making it work
-
-**Score consistently.** Exact match where possible. Where judgement is needed, a written
-rubric, applied the same way every time.
-
-**Include the failures you care about.** If a confidently wrong answer costs more than
-"I don't know", your evaluation should reflect that. Most do not, which is why systems
-optimise for confidence.
-
-**Run it on every change.** Model upgrade, prompt change, retrieval change, quantization
-change. Anything that can alter behaviour.
-
-**Keep it small enough to actually run.** Twenty cases you use beat two hundred you do
-not.
-
-::: tip If you do one thing from this book beyond the setup
-Write the evaluation set. It is the only way to know whether any of the rest of this is
-working, and it is the piece almost everyone skips.
-:::
-
 ## A suggested order
 
 1. Work through [Chapter 6](/book/06-the-first-run), including the model comparison at
@@ -139,4 +94,3 @@ working, and it is the piece almost everyone skips.
    work. Note where it falls short.
 4. Read about prompt injection again before giving any agent access to anything that
    matters.
-5. Write your twenty evaluation cases.

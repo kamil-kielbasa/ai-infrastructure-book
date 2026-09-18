@@ -21,75 +21,29 @@ The honest summary: if someone else is paying for your time, use NVIDIA. If hard
 budget is what limits you and you have patience, AMD offers more memory for the
 money.
 
-## Other ways to arrange the hardware
+## What this book left out
 
-[Chapter 11](/book/11-reference-architectures) covered tensor, pipeline and data
-parallelism. Two further ideas are becoming standard in larger deployments.
+Two things are worth knowing by name, because you will meet them in any serious
+deployment and they are cheap wins.
 
-**Disaggregated prefill and decode.** The two phases of a request want opposite hardware
-([Chapter 4](/book/04-the-gpu)). Large deployments increasingly run them on separate
-machines — compute-heavy hardware reading prompts, bandwidth-heavy hardware generating
-answers — and pass the cache between them. It raises utilisation noticeably and adds a
-great deal of complexity.
-
-**Prefix caching.** When many requests share an opening — the same system prompt, the
-same document — the cache for that shared part can be computed once and reused. For an
-assistant with a long standing instruction, or a codebase everyone asks about, this cuts
-prefill dramatically. Most serving stacks now support it and it is usually the cheapest
-performance win available.
-
-## Making generation faster
+**Prefix caching.** When many requests begin the same way — the same standing
+instruction, the same document — the cache for that shared opening is computed once and
+reused. Most serving stacks support it, and for an assistant everybody asks about the
+same codebase it removes most of the prompt-reading cost.
 
 **Speculative decoding.** A small fast model drafts several tokens; the large model
-checks them all in a single pass and keeps the ones it agrees with. When the draft is
-usually right, this multiplies speed at no cost to quality. Supported by most serving
-stacks and worth enabling.
+checks them in one pass and keeps what it agrees with. Faster output, same quality.
 
-**Newer numeric formats.** FP8 and FP4 are supported natively by recent hardware and cut
-memory and bandwidth further than the Q4 of [Chapter 2](/book/02-size-and-memory), with
-better quality at the same size. Expect them to become the default as older cards age
-out.
-
-**Quantizing models yourself.** AWQ, GPTQ and GGUF conversion, done by hand. Worth
-learning only when a model you need is not published in the format you need.
-
-## Other kinds of model
-
-Text generation is one workload among several, and the others often deliver value sooner.
-
-| Kind | What it does | Why it is often first |
-| --- | --- | --- |
-| **Speech to text** | Transcription, from the Whisper family and its successors | Meeting notes and call transcripts are immediately useful and run on modest hardware |
-| **Text to speech** | Spoken output | Accessibility, voice interfaces |
-| **Document OCR** | Turning scans and PDFs into structured text | Usually the real bottleneck in a document pipeline |
-| **Vision-language** | Reading images, screenshots and diagrams | Inspection, documentation, accessibility |
-| **Embedding models** | Turning text into vectors | The foundation of retrieval — see [Chapter 12](/book/12-your-own-data) |
-
-These generally need far less memory than chat models. An organisation with one
-mid-range card can often serve transcription and OCR for everybody.
-
-## Operations
-
-**Orchestration.** Kubernetes runs containers across many machines automatically:
-scheduling work, restarting what fails, scaling with demand. For inference it adds
-GPU-aware scheduling, model loading and rolling updates. It becomes genuinely necessary
-once you run more than one GPU server with uptime expectations — and it is pure overhead
-for a single box. Do not start here.
-
-**Observability.** Logging prompts, responses, latency, token counts and error rates, and
-tracing multi-step agent runs from start to finish. The moment more than one person uses
-the system you will be asked what it costs and why it produced a particular answer.
-Retrofitting this is painful.
-
-**Model versioning.** Treat model weights as a deployed artefact: pin versions, keep the
-previous one, and be able to roll back. A model upgrade can change behaviour as much as a
-code change, and it will do so silently.
+Beyond those, larger deployments split prompt-reading and answer-writing across different
+machines, run orchestration across many nodes, and treat model versions as deployed
+artefacts to be pinned and rolled back. All of it is real, none of it belongs in a first
+build.
 
 ## What to read next
 
-Nothing in this chapter is where to start. If you have not yet made a model useful with
-your own material ([Chapter 12](/book/12-your-own-data)) or thought about what happens
-when an agent reads something hostile ([Chapter 13](/book/13-security-and-evaluation)),
-both will pay off sooner than any hardware on this page.
+Nothing on this page is where to start. If you have not yet made a model useful with your
+own material ([Chapter 12](/book/12-your-own-data)), or thought about what happens when an
+agent reads something hostile ([Chapter 13](/book/13-security)), both will pay off sooner
+than any hardware here.
 
-[Chapter 15](/book/15-closing) is a page of what to remember from all of it.
+[Chapter 15](/book/15-closing) is one page on what to remember from all of it.

@@ -139,7 +139,7 @@ deployment without buying anything.
 1. Put ten documents into Open WebUI and ask questions about them. Notice what it gets
    wrong.
 2. Build a test set: the questions your colleagues actually ask, with the answers you
-   would accept ([Chapter 13](/book/13-security-and-evaluation#evaluation)).
+   would accept.
 3. Build the simplest thing that could work, then measure it against that set.
 4. Add hybrid search. Measure again.
 5. Only then consider anything more elaborate.

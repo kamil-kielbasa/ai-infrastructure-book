@@ -26,15 +26,13 @@ Now consider two requests arriving at once.
 
 ```mermaid
 flowchart TB
-    subgraph seq [Sequential — one at a time]
-        direction LR
-        S1["Read all weights<br/>→ token for A"] --> S2["Read all weights<br/>→ token for B"]
-    end
-    subgraph bat [Batched — together]
-        direction LR
-        B1["Read all weights once<br/>→ token for A <b>and</b> B"]
-    end
+    S1[Read all weights] --> S2[Token for A]
+    S2 --> S3[Read all weights again] --> S4[Token for B]
+    B1[Read all weights once] --> B2[Token for A]
+    B1 --> B3[Token for B]
 ```
+
+The top row is sequential, the bottom row batched.
 
 Processed sequentially, the weights are read twice. Processed together, they are read
 **once**, and the same bytes serve both requests. The extra arithmetic for the second
@@ -61,14 +59,14 @@ A production inference server is a scheduler wrapped around a model.
 
 ```mermaid
 flowchart LR
-    C1[Client 1] --> Q
+    C1[Client 1] --> Q[Queue]
     C2[Client 2] --> Q
     C3[Client 3] --> Q
-    Q[Request queue] --> SCH{Scheduler}
-    SCH -->|forms a batch| GPU[GPU executes<br/>one step for<br/>every request<br/>in the batch]
-    GPU -->|token per request| STR[Streaming<br/>responses]
+    Q --> SCH{Scheduler}
+    SCH --> GPU[GPU runs one step<br/>for the whole batch]
+    GPU --> STR[Streaming replies]
     GPU -->|not finished| SCH
-    SCH <--> KV[(KV cache pool<br/>paged memory)]
+    SCH <--> KV[(KV cache pool)]
 ```
 
 Each iteration, the scheduler decides which of the waiting and in-flight requests go
