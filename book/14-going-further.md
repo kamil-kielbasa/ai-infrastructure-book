@@ -12,9 +12,9 @@ real but each comes with a caveat.
 
 | Vendor | Hardware | Where it stands |
 | --- | --- | --- |
-| **AMD** | Instinct MI300X and later, Radeon PRO | Excellent memory capacity per euro. ROCm has become genuinely usable and major engines support it, but you will hit rough edges NVIDIA users do not. |
-| **Intel** | Gaudi accelerators, Arc GPUs | Competitive pricing, smaller software ecosystem. Worth a look if your vendor relationship points that way. |
-| **Apple** | M-series unified memory | Unmatched memory per euro for one user. Weak prompt processing ([Chapter 4](/book/04-the-gpu)), and not a serving platform. |
+| **AMD** | Radeon AI PRO R9700, Instinct MI210 and later | The best memory per euro in this book — about a quarter of NVIDIA's price per gigabyte ([Chapter 11](/book/11-reference-architectures)). ROCm is genuinely usable and the major engines support it, but you will hit rough edges NVIDIA users do not. Instinct parts above the MI210 are quote-only rather than retail. |
+| **Intel** | Gaudi accelerators, Arc GPUs | Competitive pricing, smaller software ecosystem, and little memory per card at the consumer end. Worth a look if your vendor relationship points that way. |
+| **Apple** | M-series unified memory | Very strong memory per euro for one user, and now strong bandwidth too. Weak prompt processing ([Chapter 4](/book/04-the-gpu)), and not a serving platform. |
 | **Cloud TPUs, Trainium, and similar** | Provider-specific | Cheap at scale, but you are renting, and portability is limited. |
 
 The honest summary: if someone else is paying for your time, use NVIDIA. If hardware
@@ -26,10 +26,10 @@ money.
 Two things are worth knowing by name, because you will meet them in any serious
 deployment and they are cheap wins.
 
-**Prefix caching.** When many requests begin the same way — the same standing
-instruction, the same document — the cache for that shared opening is computed once and
-reused. Most serving stacks support it, and for an assistant everybody asks about the
-same codebase it removes most of the prompt-reading cost.
+**Prefix caching and cache offloading.** When many requests begin the same way, the
+cache for that shared opening is computed once and reused — and it can be kept in system
+RAM or on disk rather than GPU memory. [Chapter 2](/book/02-size-and-memory) covers what
+this does and, more importantly, what it does not.
 
 **Speculative decoding.** A small fast model drafts several tokens; the large model
 checks them in one pass and keeps what it agrees with. Faster output, same quality.

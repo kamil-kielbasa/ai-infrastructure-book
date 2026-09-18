@@ -98,17 +98,28 @@ running a 70B model at Q4 (39 GB of weights, leaving about 56 GB) works out as:
 
 | Context per user | Cache per user | Users served at once |
 | --- | --- | --- |
-| 8K | 1.3 GB | ~43 |
 | 32K | 5 GB | ~11 |
 | 128K | 21 GB | ~2 |
+| 256K | 42 GB | ~1 |
 | 1M | 164 GB | **0 — will not fit even once** |
 
-::: tip The trade nobody mentions
-Context length and user count are the same budget. You can serve a lot of people with
-short contexts, or very few with long ones.
+Those last two rows are the context windows current models actually advertise
+([Chapter 8](/book/08-the-model-landscape)), which is the uncomfortable part: a 96 GB
+card running a conventional 70B model cannot give a single user the window the model
+claims to support.
 
-If a team asks for both "a 128K window" and "everyone can use it at once", those are two
-different machines. Decide which one you are actually buying.
+**The escape is the model, not the card.** A model with compressed attention costs about
+890 bytes per token rather than 160 kilobytes. The same 56 GB pool then holds a 256K
+context for roughly 240 people, or a million-token context for sixty.
+
+::: tip The trade nobody mentions
+With conventional attention, context length and user count are the same budget. You can
+serve a lot of people with short contexts, or very few with long ones.
+
+If a team asks for both "a 256K window" and "everyone can use it at once", on a
+conventional model those are two different machines. On a model built for long context
+they are the same machine. Check which kind you are deploying before you price the
+hardware.
 :::
 
 A gentler option than buying more hardware: cap the configured context at what the work

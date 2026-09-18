@@ -4,12 +4,12 @@ A model name carries five separate pieces of information. Once you can decode it
 of the confusion around choosing a model disappears.
 
 ```
-qwen3.5 : 4b - instruct - q4_K_M
-   │       │      │          │
-   │       │      │          └── quantization (Chapter 2)
-   │       │      └───────────── what it was trained to do
-   │       └──────────────────── parameter count (Chapter 1)
-   └──────────────────────────── family and generation
+qwen3.8 : 27b - instruct - q4_K_M
+   │       │       │          │
+   │       │       │          └── quantization (Chapter 2)
+   │       │       └───────────── what it was trained to do
+   │       └───────────────────── parameter count (Chapter 1)
+   └───────────────────────────── family and generation
 ```
 
 ## Family
@@ -25,7 +25,7 @@ The family tells you who built the model and what lineage it belongs to.
 | `mistral`, `devstral`, `ministral` | Mistral | Efficiency; built in Europe |
 | `nemotron` | NVIDIA | Agentic use, tuned for their own hardware |
 | `deepseek` | DeepSeek | Reasoning and code at very large scale |
-| `gpt-oss` | OpenAI | Open-weight reasoning models |
+| `glm` | Z.ai | Open-weight reasoning and agentic models |
 | `glm` | Z.ai | Coding and agentic work |
 | `olmo` | Allen Institute | Fully open — training data and code published too |
 

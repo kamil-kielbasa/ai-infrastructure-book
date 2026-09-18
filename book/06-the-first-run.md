@@ -91,8 +91,8 @@ localhost only.
 ## Step 2 — A model, and the numbers behind it
 
 ```bash
-ollama pull qwen3.5:4b
-ollama run --verbose qwen3.5:4b
+ollama pull nemotron-3-nano:4b
+ollama run --verbose nemotron-3-nano:4b
 ```
 
 Ask it something. `--verbose` prints statistics when the answer completes, including
@@ -171,17 +171,21 @@ shell or filesystem tools. See [Chapter 13](/book/13-security).
 Pull a sparse model and run the same prompt on both:
 
 ```bash
-ollama pull gpt-oss:20b
+ollama pull ornith-1.5:35b-a3b
 ```
 
 | Model | `ollama ps` | Speed | Behaviour |
 | --- | --- | --- | --- |
-| `qwen3.5:4b` | `100% GPU` | 40–60 tok/s | Searches and answers, but reasoning over results is shallow and it loses the thread across steps |
-| `gpt-oss:20b` | CPU/GPU split | 3–10 tok/s | Chains tool calls correctly and holds a plan together |
+| `nemotron-3-nano:4b` | `100% GPU` | 40–60 tok/s | Searches and answers, but reasoning over results is shallow and it loses the thread across steps |
+| `ornith-1.5:35b-a3b` | CPU/GPU split | 8–15 tok/s | Chains tool calls correctly and holds a plan together |
 
 That difference is the practical meaning of model size. On 4 GB of VRAM you choose one
 or the other; you do not get both. [Chapter 8](/book/08-the-model-landscape) shows what
 hardware removes the choice.
+
+The second model only manages those speeds because it is sparse — 3B of its 36B
+parameters are active per token ([Chapter 3](/book/03-dense-and-sparse)). A dense model
+of the same footprint, run mostly from system RAM, would be several times slower.
 
 ## Measuring your own machine
 
@@ -191,7 +195,7 @@ of minutes, and you should before making any decision that costs money.
 ### The two numbers that matter
 
 ```bash
-ollama run --verbose qwen3.5:4b
+ollama run --verbose nemotron-3-nano:4b
 ```
 
 Ask something, and read the summary printed after the answer:
@@ -212,7 +216,7 @@ prompt. Feed it something large instead:
 
 ```bash
 # roughly 30,000 tokens of input
-cat some-long-document.txt | ollama run --verbose qwen3.5:4b "Summarise this."
+cat some-long-document.txt | ollama run --verbose nemotron-3-nano:4b "Summarise this."
 ```
 
 Now `prompt eval rate` is meaningful, and the gap between the two rates is the
@@ -221,8 +225,8 @@ prefill-versus-decode split from [Chapter 4](/book/04-the-gpu) made concrete.
 ### Testing a sparse model
 
 This matters most for sparse models, where [Chapter 3](/book/03-dense-and-sparse) says
-the arithmetic gives only a range. Run the same measurement on `gpt-oss:20b` and see
-where inside that range your hardware actually lands.
+the arithmetic gives only a range. Run the same measurement on `ornith-1.5:35b-a3b` and
+see where inside that range your hardware actually lands.
 
 ### Going further
 

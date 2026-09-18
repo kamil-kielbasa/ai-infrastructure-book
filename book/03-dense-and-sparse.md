@@ -93,15 +93,17 @@ That is the whole point of the architecture.
 ## Why nearly every large model is sparse
 
 Look at any recent model above roughly 100B parameters and it will be a MoE.
-DeepSeek-V3 is 671B total with 37B active. The pattern is universal at the top end
-because it is the only way to keep serving costs tolerable: a provider pays for
-compute per token, and sparse models cut that by an order of magnitude while keeping
-the capacity that large parameter counts buy.
+DeepSeek-V4.1-Flash carries 552B backbone parameters and activates 8B of them to read a
+prompt and 16B to write an answer — one expert in sixty-four doing the work on any given
+token. The pattern is universal at the top end because it is the only way to keep
+serving costs tolerable: a provider pays for compute per token, and sparse models cut
+that by an order of magnitude while keeping the capacity that large parameter counts
+buy.
 
 For anyone running models themselves the implication reverses. Sparse models are
 generous with compute and greedy with memory — and memory is exactly what is scarce
-and expensive. A 671B-A37B model needs enough RAM for 671B parameters. The fact that
-only 37B are active per token does not reduce that by one byte.
+and expensive. That model needs enough RAM for all 763B of its parameters. The fact that
+only 8B are active while it reads does not reduce that by one byte.
 
 ## What this means going forward
 

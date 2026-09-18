@@ -169,29 +169,89 @@ So for a typical 8B model: $2 \times 32 \times 8 \times 128 \times 1 = 65{,}536$
 You rarely need to compute this. These are the figures for typical modern models, storing
 the cache at 8-bit:
 
-| Model size | Cache per 1,000 tokens | 32K context | 128K context | 1M context |
-| --- | --- | --- | --- | --- |
-| 8B | ~64 MB | 2 GB | 8 GB | 64 GB |
-| 32B | ~128 MB | 4 GB | 16 GB | 128 GB |
-| 70B | ~160 MB | 5 GB | 21 GB | 164 GB |
-| 120B | ~220 MB | 7 GB | 28 GB | 220 GB |
+| Model size | Cache per 1,000 tokens | 256K context | 1M context |
+| --- | --- | --- | --- |
+| 8B | ~64 MB | 17 GB | 64 GB |
+| 32B | ~128 MB | 34 GB | 128 GB |
+| 70B | ~160 MB | 42 GB | 164 GB |
+| 120B | ~220 MB | 58 GB | 220 GB |
 
-Approximate — architectures differ, and a model card will give you the exact shape. Some
-very large models use compressed attention schemes that cut these figures by a large
-factor; where the number matters to a purchase, measure it rather than trusting this
-table.
+Approximate, and — as the next section explains — increasingly pessimistic.
+Architectures differ, and a model card gives you the exact shape.
 
-Read the last column carefully. A 70B model's weights come to about 39 GB at Q4. Giving
-it a **one-million-token context costs four times more memory than the model itself.**
+Read the last column carefully. A 70B model's weights come to about 39 GB at Q4. On this
+arithmetic, giving it a **one-million-token context costs four times more memory than
+the model itself.**
 
-::: warning Long context is a hardware purchase
-Hosted services advertise context windows of 200K or a million tokens. Those numbers are
-real, and they are expensive. Running the same thing yourself means buying the memory to
-hold it — and that memory is multiplied again by every user who is served at the same
-time ([Chapter 10](/book/10-from-one-user-to-many)).
+### That arithmetic is the classical case
 
-Deciding you need a million tokens of context is a bigger commitment than deciding you
-need a 70B model.
+Every figure in the table assumes each layer keeps a full set of keys and values for
+every token. This was universally true until recently, and it remains true of most
+models you will download today.
+
+The newest models do something different, and the difference is not incremental.
+DeepSeek-V4.1-Flash stores its global KV cache in **890 bytes per token**.
+
+Set that against the table above, where a 70B model spends roughly 160,000 bytes per
+token, and run both out to a million-token context:
+
+| Model | Cache per token | Cache at 1M tokens |
+| --- | --- | --- |
+| Classical 70B | ~160 KB | **164 GB** |
+| DeepSeek-V4.1-Flash | 890 B | **0.89 GB** |
+
+A million tokens of context, in under a gigabyte. DeepSeek reports this as about a
+four-fold improvement on its own previous generation, and a **437-fold** improvement on
+DeepSeek-V1.
+
+Several techniques stacked together get you there. The names are worth recognising even
+if the details are not: a **causal encoder-decoder** split, where the decoder projects
+one global cache from the encoder's final state instead of every layer keeping its own;
+**compressed sparse attention**, where layers share indices rather than each computing
+its own; and storing the cache itself at **FP4**.
+
+::: warning This is the fastest-moving number in the book
+An order of magnitude is not a tuning detail — it decides which machine you buy. A
+purchase justified by "we need a million tokens of context" may not survive contact with
+a model released next quarter.
+
+Treat the table above as an **upper bound**, then read the model card.
+
+- Ordinary attention — the table is accurate.
+- Compressed, latent, or sparse attention — the real figure can be a hundred times
+  lower.
+:::
+
+### Spilling the cache to RAM and disk
+
+There is a second escape route, and it is production software rather than a research
+curiosity. A runtime can hold the KV cache in tiers: GPU memory first, then CPU RAM,
+then a local SSD, then shared storage across the network. **LMCache** does exactly this,
+and vLLM ships connectors for it.
+
+It is genuinely useful and very commonly misunderstood, so be precise about what it buys:
+
+| | |
+| --- | --- |
+| **What it does** | Keeps caches from *earlier* requests, so a repeated prefix is never processed twice. A long system prompt, a codebase, a document the whole team asks about — processed once, reused many times. |
+| **What it improves** | Time to first token, dramatically, whenever a prefix repeats. |
+| **What it does not do** | Extend the context of the conversation you are having right now. The active request's cache still has to sit in GPU memory. |
+
+The reason is the same arithmetic as everywhere else in this chapter. An SSD delivers a
+few gigabytes per second; GPU memory delivers hundreds. Nothing the model consults on
+*every* token can live on a disk. Offloading works precisely because the data it moves is
+cold — needed once at the start of a request, not continuously throughout it.
+
+So it is a strong answer to "fifty people share one long system prompt", and no answer
+at all to "I want a million-token conversation on a small card".
+
+::: warning Long context is still a hardware purchase
+Hosted services advertise windows of 200K or a million tokens. Those numbers are real,
+and someone is paying for the memory that holds them — multiplied by every user served
+at the same time ([Chapter 10](/book/10-from-one-user-to-many)).
+
+Compression and offloading have moved that price a long way down. Neither has made it
+zero.
 :::
 
 ### What to do about it
@@ -202,6 +262,10 @@ need a 70B model.
   "just in case" spends memory every second the model is loaded.
 - **Check the model's real limit.** A model advertised with a 128K window is often
   trained well for far less, and quality degrades in the upper range.
+- **If you need long context, choose the architecture for it.** Picking a model with
+  compressed attention saves more memory than every other item on this list combined.
+- **Turn on prefix caching when prompts repeat.** It costs nothing and removes the
+  dominant share of the waiting in most team deployments.
 
 ## The memory budget
 
