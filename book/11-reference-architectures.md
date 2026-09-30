@@ -12,15 +12,16 @@ determines generation speed, and compute because it determines prompt processing
 | Device | Memory | Bandwidth | FP16 compute | Price (EUR) |
 | --- | --- | --- | --- | --- |
 | Laptop workstation GPU | 4 GB GDDR6 | ~190 GB/s | ~40 TFLOPS | in-laptop |
-| RTX 5070 Ti | 16 GB GDDR7 | ~900 GB/s | ~175 TFLOPS | ~1,100 |
+| RTX 5070 Ti | 16 GB GDDR7 | ~900 GB/s | ~88 TFLOPS | ~1,000 |
 | AMD Radeon AI PRO R9700 | 32 GB GDDR6 | ~640 GB/s | ~95 TFLOPS | ~1,700 |
+| Strix Halo mini-PC (Ryzen AI Max+ 395) | 128 GB unified | ~256 GB/s | ~60 TFLOPS | 2,500–3,500 |
 | Mac Studio, M5 Max | 36–128 GB unified | ~614 GB/s | not published | 2,900–5,900 |
 | DGX Spark (GB10) | 128 GB unified | ~273 GB/s | ~125 TFLOPS | 4,600–6,000 |
 | RTX 5090 | 32 GB GDDR7 | ~1,790 GB/s | ~210 TFLOPS | 5,200–6,800 |
+| AMD Instinct MI210 | 64 GB HBM2e | ~1,600 GB/s | ~180 TFLOPS | ~5,000, importer stock |
 | Mac Studio, M5 Ultra | 96–256 GB unified | ~1,200 GB/s | not published | 6,400–11,000 |
-| AMD Instinct MI210 | 64 GB HBM2e | ~1,600 GB/s | ~180 TFLOPS | ~9,200 |
-| RTX PRO 6000 Blackwell | 96 GB GDDR7 ECC | ~1,790 GB/s | ~250 TFLOPS | from 18,000 |
-| H200 NVL | 141 GB HBM3 | ~4,800 GB/s | ~990 TFLOPS | 35,000–37,000 |
+| RTX PRO 6000 Blackwell | 96 GB GDDR7 ECC | ~1,790 GB/s | ~250 TFLOPS | from 13,000 |
+| H200 NVL | 141 GB HBM3e | ~4,800 GB/s | ~835 TFLOPS | 31,000–37,000 |
 
 **Prices** are the cheapest listed European retail offer including VAT, taken in
 September 2026; Mac Studio figures are complete configurations rather than base models.
@@ -30,9 +31,9 @@ vendor sheets often quote double these figures "with sparsity", which does not a
 ordinary inference.
 
 ::: warning Check availability, not just price
-The Mac Studio M5 is on pre-order as this is written, and its **512 GB configuration is
-announced for a later date than the rest of the range**. This book therefore sizes
-unified-memory machines on 256 GB, the largest you can actually order.
+The Mac Studio M5 began shipping days before this was written, and its **512 GB
+configuration is announced for a later date than the rest of the range**. This book
+therefore sizes unified-memory machines on 256 GB, the largest you can actually order.
 
 The general point is worth keeping: a configuration that appears in a specification
 sheet is not necessarily one you can buy this quarter.
@@ -41,8 +42,8 @@ sheet is not necessarily one you can buy this quarter.
 ### The two prices worth staring at
 
 **Single-card memory is the most expensive commodity in this book.** An RTX PRO 6000 has
-three times the memory of an RTX 5090 and almost identical bandwidth, for roughly three
-times the money.
+three times the memory of an RTX 5090 and almost identical bandwidth, for roughly two
+and a half times the money.
 
 **And the cheapest memory is not NVIDIA's.**
 
@@ -50,10 +51,10 @@ times the money.
 | --- | --- | --- | --- |
 | AMD Radeon AI PRO R9700 | 32 GB | ~€1,700 | **~€53** |
 | RTX 5090 | 32 GB | ~€5,200 | ~€163 |
-| RTX PRO 6000 Blackwell | 96 GB | ~€18,000 | ~€188 |
-| H200 NVL | 141 GB | ~€35,000 | ~€249 |
+| RTX PRO 6000 Blackwell | 96 GB | ~€13,000 | ~€135 |
+| H200 NVL | 141 GB | ~€31,000 | ~€220 |
 
-A gigabyte of VRAM on an AMD workstation card costs about a quarter of the NVIDIA
+A gigabyte of VRAM on an AMD workstation card costs about a third of the NVIDIA
 equivalent, and the R9700 is a dual-slot blower design, so several fit in one chassis.
 
 The catch is software, not silicon. AMD runs through **ROCm** rather than CUDA;
@@ -86,7 +87,7 @@ Prefill ([Chapter 4](/book/04-the-gpu)) costs roughly $2 \times \text{active par
 
 | Hardware | Reads the prompt in | Then writes at |
 | --- | --- | --- |
-| H200 NVL | ~13 s | ~120 tok/s |
+| H200 NVL | ~15 s | ~120 tok/s |
 | RTX PRO 6000 | ~50 s | ~46 tok/s |
 | Mac Studio M5 Ultra | not published — measure it | ~30 tok/s |
 | DGX Spark | ~1.7 min | ~7 tok/s |
@@ -116,33 +117,38 @@ flowchart LR
 ```
 
 Everything on one machine, as built in [Chapter 6](/book/06-the-first-run). The software
-is identical in all three cases below; only the box underneath changes.
+is identical in every case below; only the box underneath changes.
 
-### Three ways to spend about €4,500
+### Four ways to spend €3,000–4,500
 
 That is roughly what a decent laptop costs, and it buys a machine that runs serious
-models. What it does not buy is all three things at once:
+models. What it does not buy is everything at once:
 
-| | Radeon R9700 in a PC | Mac Studio M5 Max | DGX Spark |
-| --- | --- | --- | --- |
-| Memory | 32 GB | 64 GB | 128 GB |
-| Bandwidth | ~640 GB/s | ~614 GB/s | ~273 GB/s |
-| Price | ~€3,200 | €4,100 | €4,640 |
-| Largest model at Q4 | ~50B | ~110B | ~230B |
-| Generation, 32B model | 20–25 tok/s | 20–25 tok/s | ~9 tok/s |
+| | Radeon R9700 in a PC | Mac Studio M5 Max | DGX Spark | Strix Halo mini-PC |
+| --- | --- | --- | --- | --- |
+| Memory | 32 GB | 64 GB | 128 GB | 128 GB |
+| Bandwidth | ~640 GB/s | ~614 GB/s | ~273 GB/s | ~256 GB/s |
+| Price | ~€3,200 | €4,100 | €4,640 | ~€2,900 |
+| Largest model at Q4 | ~50B | ~110B | ~230B | ~230B |
+| Generation, 32B model | 20–25 tok/s | 20–25 tok/s | ~9 tok/s | ~8 tok/s |
 
-Read it downwards. **Memory quadruples while bandwidth more than halves.** That is the
-central trade of this book expressed as one purchase, and nothing at this price escapes
-it.
+Read it across. **Bandwidth buys speed, memory buys capability, and nothing at this
+price has both.** That is the central trade of this book expressed as one purchase.
 
 - **The Radeon** is the fastest per euro and the most limited. It runs mid-range models
   well and stops abruptly at 32 GB. ROCm rather than CUDA.
 - **The Mac** is the balanced choice: enough memory for a 100B-class model, enough
   bandwidth to answer briskly, and it is silent. Weak on long prompts, for reasons
-  [below](#the-two-unified-memory-machines-fail-differently).
-- **The Spark** loads models the other two cannot open at all, and writes answers at
-  about reading speed. A capability purchase rather than a speed one, and it
+  [below](#the-two-unified-memory-machines-fail-differently). Run it through an
+  MLX-based stack — LM Studio or `mlx-lm` — which is the consistently fastest path on
+  Apple hardware; Ollama is growing an MLX backend too.
+- **The Spark** loads models the Radeon and Mac cannot open at all, and writes answers
+  at about reading speed. A capability purchase rather than a speed one, and it
   [clusters](#connecting-several-machines).
+- **The Strix Halo mini-PC** (AMD Ryzen AI Max+ 395) is the cheapest 128 GB in the
+  book — the Spark's capability class at two thirds of its price, without CUDA:
+  inference runs through Vulkan or ROCm, with the software caveats
+  [above](#the-two-prices-worth-staring-at).
 
 If you already have a gaming machine with a 16 GB card, start there and spend nothing
 ([Chapter 5](/book/05-the-reference-machine)).
@@ -198,30 +204,30 @@ total, about 1,790 GB/s each, in a standard chassis with ordinary power and cool
 
 | Item | Cost (EUR) |
 | --- | --- |
-| 2× RTX PRO 6000 Blackwell, 96 GB | 36,000 |
+| 2× RTX PRO 6000 Blackwell, 96 GB | 26,000 |
 | Chassis, CPU, 256 GB RAM, NVMe | 5,000–7,000 |
-| **Capital total** | **41,000–43,000** |
+| **Capital total** | **31,000–33,000** |
 | Power, ~1.5 kW at €0.25/kWh | ~270/month |
-| Spread over 3 years | ~1,170/month |
-| **Running total** | **~1,450/month** |
+| Spread over 3 years | ~890/month |
+| **Running total** | **~1,150/month** |
 
 ::: warning The cards are most of the cost
-Nine tenths of the capital here is two pieces of silicon. Every other decision in this
+Four fifths of the capital here is two pieces of silicon. Every other decision in this
 build — chassis, CPU, memory, disks — is rounding error by comparison. Spend your
 deliberation accordingly.
 :::
 
-### The same memory for less than half the money
+### The same memory for about half the money
 
-Six Radeon AI PRO R9700 cards also come to 192 GB, for well under half the price.
+Six Radeon AI PRO R9700 cards also come to 192 GB, for roughly half the price.
 
 | | 2× RTX PRO 6000 | 6× Radeon AI PRO R9700 |
 | --- | --- | --- |
 | Total GPU memory | 192 GB | 192 GB |
 | Memory per card | 96 GB | 32 GB |
-| Capital total | €41,000–43,000 | €16,000–18,000 |
+| Capital total | €31,000–33,000 | €16,000–18,000 |
 | Power | ~1.5 kW | ~2.1 kW |
-| Running total | ~€1,450/month | ~€850/month |
+| Running total | ~€1,150/month | ~€850/month |
 | Software | CUDA | ROCm |
 
 The totals are equal and the builds are not, because **what matters is the largest
@@ -231,7 +237,7 @@ over PCIe — neither part has NVLink — and that costs real speed
 ([Chapter 10](/book/10-from-one-user-to-many#splitting-a-model-across-gpus)).
 
 - **Several mid-size models, many users.** The AMD build wins. Each card runs its own
-  model, they never talk to each other, and you save €25,000.
+  model, they never talk to each other, and you save some €15,000.
 - **One large model.** The NVIDIA build wins. Fewer, bigger chunks is the whole game.
 
 This is the largest cost decision in the book, and it turns on your workload rather than
@@ -241,7 +247,7 @@ the interconnect out of the design entirely.
 
 ### What to expect from it
 
-Take `nemotron-3-super` (124B-A12B) on one card — 68 GB of weights, leaving about 28 GB
+Take `nemotron-3-super` (120B-A12B) on one card — 66 GB of weights, leaving about 30 GB
 of cache pool. It uses conventional attention, so [Chapter 2](/book/02-size-and-memory)
 applies at roughly 220 MB per thousand tokens:
 
@@ -257,15 +263,15 @@ Conventional attention and modern context windows are close to incompatible on a
 card.
 
 That is why a model's architecture now matters more than its size. A design spending a
-few hundred bytes per token rather than 220 kilobytes turns the same 28 GB pool into
+few hundred bytes per token rather than 220 kilobytes turns the same 30 GB pool into
 hundreds of seats.
 
 **Generation speed** barely changes down the rows, since it follows bandwidth and active
 parameters rather than context. The bounds from [Chapter 3](/book/03-dense-and-sparse)
-here are roughly 270 tokens per second optimistic and 26 pessimistic — precisely why that
+here are roughly 270 tokens per second optimistic and 27 pessimistic — precisely why that
 chapter says to measure sparse models rather than trust the arithmetic.
 
-**Prompt reading** follows the 12B active parameters, not the 124B total. A dense 70B
+**Prompt reading** follows the 12B active parameters, not the 120B total. A dense 70B
 model on the same card would take about six times longer. This is the strongest practical
 argument for sparse models in a shared deployment.
 
@@ -304,25 +310,31 @@ organisations, the wrong one — three hundred thousand euros, ten kilowatts, an
 room. Start lower.
 
 **Four 96 GB workstation cards in one server** give you 384 GB of GPU memory for roughly
-a quarter of that price, in a chassis that lives in an ordinary office.
+a fifth of that price, in a chassis that lives in an ordinary office.
 
 | Item | Budget build | Datacenter build |
 | --- | --- | --- |
 | GPUs | 4× RTX PRO 6000, 96 GB | 8× H200 NVL, 141 GB |
 | Total GPU memory | 384 GB | 1,128 GB |
 | Bandwidth per GPU | ~1,790 GB/s | ~4,800 GB/s |
-| Interconnect | PCIe | NVLink |
-| Hardware cost | ~€80,000 | ~€300,000 |
-| Cost per GB of GPU memory | ~€208 | ~€266 |
+| Interconnect | PCIe | NVLink, in 4-GPU islands |
+| Hardware cost | ~€60,000 | ~€300,000 |
+| Cost per GB of GPU memory | ~€156 | ~€266 |
 | Power | ~3 kW | ~10 kW |
 | Cooling | Normal room air | Server room or liquid |
-| Spread over 3 years | ~€2,200/month | ~€8,300/month |
+| Spread over 3 years | ~€1,700/month | ~€8,300/month |
 
 Be careful with the comparison, because it is closer than it used to be. The previous
 generation of datacenter card held 80 GB; this one holds 141 GB, and eight come to more
 than a terabyte. **The datacenter build now wins on absolute memory as well as on
 bandwidth.** What the budget build still wins is euros per gigabyte, power, and the fact
 that it does not require a building project.
+
+One nuance on that NVLink cell: the NVL card takes bridges in pairs and fours, so an
+eight-card server is two 4-GPU NVLink islands talking over PCIe. A fully NVLink-switched
+eight is the SXM variant — a different, still more expensive machine. For tensor
+parallelism ([Chapter 10](/book/10-from-one-user-to-many#splitting-a-model-across-gpus))
+the island is the unit that matters.
 
 That last point is not a footnote. Ten kilowatts is five domestic kettles running
 permanently, all of it turning into heat in one rack: it needs dedicated power, forced
@@ -338,9 +350,10 @@ operations.
 :::
 
 An AMD equivalent exists here too: **eight Instinct MI210 cards** give 512 GB of HBM2e
-for roughly €74,000 — more memory than the budget NVIDIA build at similar money. They
-are passively cooled datacenter parts needing a proper chassis, and an older generation.
-Worth a quote if HBM bandwidth matters and ROCm is acceptable.
+for roughly €45,000 — more memory than the budget NVIDIA build for less money. They
+are passively cooled datacenter parts needing a proper chassis, an older generation,
+and by now largely importer or second-hand stock rather than EU retail. Worth a quote
+if HBM bandwidth matters and ROCm is acceptable.
 
 ### What to expect from it
 
@@ -353,7 +366,7 @@ the cache, so this model wants a fifth card.
 | GPU memory | 384 GB | 480 GB | 1,128 GB |
 | V4.1-Flash at Q4 (420 GB) | Does not fit | Fits, ~60 GB spare | Fits easily |
 | V4.1-Flash at FP8 (763 GB) | No | No | Fits, ~365 GB spare |
-| Hardware cost | ~€80,000 | ~€98,000 | ~€300,000 |
+| Hardware cost | ~€60,000 | ~€73,000 | ~€300,000 |
 | Wait before the first word, 32K prompt | — | ~1.2 s | ~0.2 s |
 
 Two lessons, both cheap here and expensive later.
@@ -386,13 +399,14 @@ on the fourth. That sidesteps the interconnect problem entirely, since separate 
 never need to talk to each other.
 
 If your teams need a capable model rather than the most capable one, five workstation
-cards do the same job for a third of the datacenter price.
+cards do the same job for a quarter of the datacenter price.
 
 ### Renting
 
 At this tier, renting deserves serious thought. Cloud GPU instances run roughly €2–4 per
-accelerator-hour. A node used eight hours a day lands near €4,000–6,000 a month — no
-capital outlay, no depreciation, no server room.
+accelerator-hour on the specialist GPU clouds — hyperscalers charge two to three times
+that, spot marketplaces less. A node used eight hours a day lands near €4,000–6,000 a
+month — no capital outlay, no depreciation, no server room.
 
 Buy when the load is steady and the data cannot leave. Rent when it is bursty or you are
 still learning what you need.
@@ -407,25 +421,27 @@ Interconnect bandwidth spans orders of magnitude, and
 [Chapter 10](/book/10-from-one-user-to-many#beyond-one-card) has the table. One row of it
 changes a purchase decision, so it belongs here.
 
-A DGX Spark ships with a 400 Gb/s ConnectX port, and the cable joining two units costs
-about **€175**. NVIDIA states that one unit runs models up to 200 billion parameters,
-and that **up to four units connected this way handle models up to 700 billion.**
+A DGX Spark ships with two 200 Gb/s ConnectX-7 ports, and the cable joining two units
+costs about **€175**. NVIDIA states that one unit runs models up to 200 billion
+parameters, and that **two units joined by that cable handle models up to about 405
+billion.** Bigger Spark clusters exist, but as third-party builds around a switch, not
+as a supported product.
 
 So the honest position is narrower than "don't connect machines":
 
 | | Verdict |
 | --- | --- |
 | Several desktops on 10 GbE | Still a bad idea. The network is 400 times slower than the memory it feeds. |
-| Two to four purpose-built units on 400G | A real option, and a supported one. |
+| Two purpose-built units on 200G | A real option, and a supported one. |
 | Many nodes on InfiniBand | A real option, and a specialist's job. |
 
-What the fast cable buys is **capability, not speed**. Four linked Sparks hold a model
-that fits in none of them individually; they do not run it four times faster. Each unit
-still reads its own weights at 273 GB/s. Expect a 700B model across four boxes to be
+What the fast cable buys is **capability, not speed**. Two linked Sparks hold a model
+that fits in neither individually; they do not run it twice as fast. Each unit still
+reads its own weights at 273 GB/s. Expect a 400B-class model across two boxes to be
 *possible* and *slow*.
 
-At roughly €20,000 for four units under a desk, that is excellent value if the
-requirement is "we must be able to run the large open models at all", and the wrong
+At roughly €10,000 for two units under a desk, that is excellent value if the
+requirement is "we must be able to run 400B-class open models at all", and the wrong
 purchase if it is "fifty people need fast answers".
 
 ## How long it takes to start
@@ -458,8 +474,8 @@ in this book. Buy NVMe anyway; it costs little and removes the problem.
 The decision is not primarily financial, but the arithmetic is worth doing.
 
 A single heavy user of a hosted service might spend €100–200 per month. Architecture B
-costs about €1,450 per month all-in, so it breaks even somewhere between seven and
-fifteen heavy users — at which point it also offers unlimited volume, fixed costs, and
+costs about €1,150 per month all-in, so it breaks even somewhere between six and
+twelve heavy users — at which point it also offers unlimited volume, fixed costs, and
 data that never leaves the building.
 
 The comparison is not like for like:

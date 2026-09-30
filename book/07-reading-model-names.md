@@ -25,8 +25,9 @@ The family tells you who built the model and what lineage it belongs to.
 | `mistral`, `devstral`, `ministral` | Mistral | Efficiency; built in Europe |
 | `nemotron` | NVIDIA | Agentic use, tuned for their own hardware |
 | `deepseek` | DeepSeek | Reasoning and code at very large scale |
-| `glm` | Z.ai | Open-weight reasoning and agentic models |
-| `glm` | Z.ai | Coding and agentic work |
+| `gpt-oss` | OpenAI | Reasoning; ships 4-bit natively (MXFP4) |
+| `glm` | Z.ai | Reasoning, coding and agentic work |
+| `kimi` | Moonshot AI | Long context; very large sparse models |
 | `olmo` | Allen Institute | Fully open — training data and code published too |
 
 Families have consistent personalities across generations. It is worth finding one or
@@ -82,6 +83,13 @@ Q4_K_M
 
 Older formats use `_0` or `_1` in place of `_K_x` — `Q4_0`, `Q8_0`. Those are earlier,
 simpler schemes; prefer `_K_` where both exist.
+
+These suffixes belong to **GGUF**, the model file format used by llama.cpp and
+everything built on it, Ollama included — the format you will meet whenever you
+download a quantized model by hand. Production stacks such as vLLM generally do not
+run GGUF: they load the original **safetensors** checkpoints, quantized with different
+schemes — AWQ, GPTQ, FP8 — that serve the same purpose under different names.
+[Chapter 10](/book/10-from-one-user-to-many) returns to this when the tooling changes.
 
 What each format costs in memory is in [Chapter 2](/book/02-size-and-memory). If a name
 carries no quantization suffix, tooling generally defaults to Q4_K_M.

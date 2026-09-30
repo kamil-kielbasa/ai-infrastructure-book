@@ -74,7 +74,7 @@ into the next batch. It is balancing three things:
 
 - **KV cache memory.** Every active request holds context ([Chapter 2](/book/02-size-and-memory)). The cache pool, not compute, is usually what limits how many requests fit at once.
 - **Fairness.** A long generation should not starve short ones.
-- **Prefill against decode.** A newly-arrived long prompt needs a big compute burst ([Chapter 4](/book/04-the-gpu)) which stalls everyone else's token stream if scheduled carelessly.
+- **Prefill against decode.** A newly-arrived long prompt needs a big compute burst ([Chapter 4](/book/04-the-gpu)) which stalls everyone else's token stream if scheduled carelessly. Production servers therefore slice long prompts into pieces and interleave them with everyone's decode steps — **chunked prefill**, on by default in current vLLM.
 
 **Paged attention** is the technique that makes this workable. Instead of reserving one
 contiguous block of memory for each request's largest possible context, the cache is
@@ -160,9 +160,9 @@ all to "I want a million-token conversation on a small card".
 
 | Stack | Use when | Trade-off |
 | --- | --- | --- |
-| **Ollama** | Development, one user, experimentation | Trivial setup, model management, automatic CPU/GPU splitting. Requests are largely serialised. |
-| **vLLM** | Production serving | Continuous batching and paged attention. Model must fit in VRAM; no CPU offload. More operational work. |
-| **SGLang** | Production, especially large sparse models | Comparable to vLLM; often faster on MoE. Less mature ecosystem. |
+| **Ollama** | Development, one user, experimentation | Trivial setup, model management, automatic CPU/GPU splitting. Serialises requests by default (`OLLAMA_NUM_PARALLEL` raises it, at a context-memory cost per slot). |
+| **vLLM** | Production serving | Continuous batching and paged attention. Built for models that fit in VRAM — CPU offload exists but costs an order of magnitude. More operational work. |
+| **SGLang** | Production, especially large sparse models | Comparable to vLLM; often faster on MoE, and its RadixAttention prefix caching shines on shared-prefix work. |
 | **llama.cpp** | Unusual hardware, CPU/GPU splitting, exotic quantization | Maximum flexibility, lower throughput. Ollama is built on it. |
 | **TensorRT-LLM** | Maximum performance on NVIDIA | Fastest where it applies. Compilation step, NVIDIA-only, least flexible. |
 
@@ -177,7 +177,36 @@ requires the model to fit in VRAM and fails at startup otherwise.
 
 A model that "worked" under Ollama may simply refuse to load under vLLM. This is not a
 regression. Ollama was quietly running it at a tenth of the speed.
+
+The file changes too. Ollama runs GGUF files ([Chapter 7](/book/07-reading-model-names));
+vLLM loads the original safetensors checkpoints, so you download the model again — as
+an AWQ, GPTQ or FP8 quantization — rather than copying it across.
 :::
+
+Two small tools smooth the same transition. **llama-swap** puts several models behind
+one endpoint on one GPU, loading whichever is requested and unloading it on a timer —
+Ollama's convenience, for any backend. And vLLM's **sleep mode** parks a model's
+weights without killing the process, making a switch tens of times faster than a cold
+start.
+
+## Making one stream faster
+
+Batching raises total throughput. **Speculative decoding** raises the speed of a
+single stream, which is what an agent burning through tool calls actually feels. A
+small draft predicts several tokens ahead; the large model checks the whole run in one
+pass — one read of the weights — and keeps the prefix it agrees with. The output is
+identical to what the large model would have written alone; the gain comes from
+validating several tokens per read of the weights instead of one.
+
+Two forms matter in practice. A separate **draft model** (llama.cpp's `--model-draft`)
+works when the pair comes from the same family: expect 1.3–2× on predictable text —
+code, structured output — and little or nothing on creative prose. Newer large models
+increasingly ship **multi-token-prediction heads**: a draft built into the model
+itself, which serving stacks use automatically, with no second model to choose or fit
+in memory.
+
+Worth trying whenever one agent's wall-clock matters. Under heavy batching the gain
+fades — the hardware is no longer waiting on memory.
 
 ## What changes as you grow
 
@@ -235,10 +264,10 @@ network. The gap between those two is the whole point:
 
 | Link | Bandwidth | Where it is used |
 | --- | --- | --- |
-| NVLink | up to ~900 GB/s | GPU to GPU inside one chassis |
+| NVLink | 900–1,800 GB/s per GPU, by generation | GPU to GPU inside one chassis |
 | PCIe 5.0 ×16 | ~64 GB/s | GPU to host, and GPU to GPU without NVLink |
 | InfiniBand NDR | ~50 GB/s | Server to server in a purpose-built cluster |
-| ConnectX, 400G QSFP112 | ~50 GB/s | Joining small AI appliances directly |
+| ConnectX, 200G QSFP56 | ~25 GB/s | Joining small AI appliances directly |
 | 100 GbE | ~12 GB/s | Server to server, commodity networking |
 | 10 GbE | ~1.2 GB/s | An ordinary office network |
 

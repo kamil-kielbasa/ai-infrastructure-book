@@ -52,10 +52,11 @@ Three consequences:
 - **Speed is measured in tokens per second.** This is the number you will watch
   throughout the book.
 - **Limits and prices are counted in tokens**, never in words.
-- **Non-English text costs more.** Most tokenizers are fitted to English. The same
+- **Non-English text costs more.** Tokenizers are fitted mostly to English. The same
   passage in a language with rich inflection — Polish, Finnish, Turkish — typically
-  costs about twice as many tokens. You get less context and slower apparent output
-  for the same content.
+  costs 30–100% more tokens, the penalty shrinking as tokenizer vocabularies grow:
+  recent models sit near the low end of that range, older ones near the high. You get
+  less context and slower apparent output for the same content.
 
 ## The generation loop
 

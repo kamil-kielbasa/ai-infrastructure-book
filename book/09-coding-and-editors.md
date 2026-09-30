@@ -65,6 +65,7 @@ local setup separate. These are not competing choices.
 | --- | --- |
 | **Continue.dev** | VS Code and JetBrains. Local chat **and** local inline completions — it fills the gap the hosted services leave. |
 | **Cline** | VS Code, agentic. Points at any OpenAI-compatible endpoint. |
+| **OpenCode** | Terminal-based agent. Provider-agnostic; documents Ollama, LM Studio and llama-server setups. |
 | **Zed** | Built-in Ollama support. Very fast editor. |
 | **Aider** | Terminal-based, git-aware. Works well with local models and commits its own changes. |
 

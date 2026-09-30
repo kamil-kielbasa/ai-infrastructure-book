@@ -93,9 +93,10 @@ That is the whole point of the architecture.
 ## Why nearly every large model is sparse
 
 Look at any recent model above roughly 100B parameters and it will be a MoE.
-DeepSeek-V4.1-Flash carries 552B backbone parameters and activates 8B of them to read a
-prompt and 16B to write an answer — one expert in sixty-four doing the work on any given
-token. The pattern is universal at the top end because it is the only way to keep
+DeepSeek-V4.1-Flash carries 763B parameters — 552B of them in its expert backbone —
+and activates 8B of them to read a prompt and 16B to write an answer: a couple of
+percent of the model doing the work on any given token. The pattern is universal at
+the top end because it is the only way to keep
 serving costs tolerable: a provider pays for compute per token, and sparse models cut
 that by an order of magnitude while keeping the capacity that large parameter counts
 buy.

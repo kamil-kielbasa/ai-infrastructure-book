@@ -27,13 +27,13 @@ a few are used per token.
 | --- | --- | --- |
 | 1B | 0.6 GB | |
 | 4B | 2.2 GB | Spark-X2.5-4B |
-| 9B | 5 GB | K2-Horizon-7B |
+| 7B | 3.9 GB | K2-Horizon-7B |
 | 14B | 7.7 GB | |
 | 27B | 15 GB | **Qwen3.8-27B** |
-| 36B | 20 GB | Ornith-1.5-35B-A3B |
-| 49B | 27 GB | Kimi-Linear-48B-A3B |
+| 35B | 19 GB | Ornith-1.5-35B-A3B |
+| 48B | 26 GB | Kimi-Linear-48B-A3B |
 | 70B | 39 GB | |
-| 124B | 68 GB | Nemotron-3-Super-120B-A12B |
+| 120B | 66 GB | Nemotron-3-Super-120B-A12B |
 | 321B | 177 GB | GLM-5.3-Flash |
 | 400B | 220 GB | |
 | 753B | 414 GB | GLM-5.3 |
@@ -80,7 +80,7 @@ described in [Chapter 4](/book/04-the-gpu#memory-technologies); here is what the
 the purchase.
 
 **Bandwidth is the bulk of a datacenter card's price.** An H200 moves bytes about two
-and a half times as fast as a high-end workstation card and does roughly four times the
+and a half times as fast as a high-end workstation card and does over three times the
 arithmetic. The first of those sets generation speed, the second sets prompt-reading
 speed ([Chapter 4](/book/04-the-gpu)). You pay several times more for both together.
 
@@ -113,7 +113,7 @@ flowchart LR
 | **2a** | Radeon AI PRO R9700 | 32 GB | 32B dense, slowly |
 | **2b** | RTX 5090 | 32 GB | 32B dense, comfortably |
 | **2c** | RTX PRO 6000 Blackwell | 96 GB | 120B sparse |
-| **3a** | DGX Spark (GB10) | 128 GB | 200B sparse |
+| **3a** | DGX Spark (GB10), Strix Halo mini-PC | 128 GB | 200B sparse |
 | **3b** | Mac Studio, M5 Ultra | up to 256 GB | 400B sparse |
 | **4a** | 1× H200 NVL | 141 GB | 235B sparse |
 | **4b** | 4× RTX PRO 6000 | 384 GB | 400B sparse |
@@ -142,15 +142,16 @@ system memory at single-digit tokens per second
 4B model and a 30B one.
 
 ::: tip The answer to the obvious question
-**Yes, you can run the largest open models on your own hardware.** A Mac Studio with
+**Yes, you can run frontier-class open models on your own hardware.** A Mac Studio with
 256 GB of unified memory costs about €11,000 and holds anything up to roughly 460B
-parameters at Q4. Four DGX Spark units joined by a 400 Gb/s cable — about €20,000 in
-total — are rated by NVIDIA for models up to 700 billion
+parameters at Q4. Two DGX Spark units joined by a 200 Gb/s cable — about €10,000 in
+total — are rated by NVIDIA for models up to 405 billion
 ([Chapter 11](/book/11-reference-architectures)).
 
 Either will generate at a usable rate and read long prompts slowly, for exactly the
-reasons in [Chapter 4](/book/04-the-gpu). "Not achievable locally" is almost never true.
-"Not achievable at this price, at this speed" usually is.
+reasons in [Chapter 4](/book/04-the-gpu). The trillion-parameter tier is the one real
+exception: those models still want a multi-GPU server. Below it, "not achievable
+locally" is almost never true. "Not achievable at this price, at this speed" usually is.
 
 Price the exact configuration before planning around it. Apple charges steeply for
 memory, and its 512 GB option is announced rather than shipping.
@@ -159,8 +160,9 @@ memory, and its 512 GB option is announced rather than shipping.
 ## The model range
 
 ::: info The same family appears more than once
-A family is a recipe, not a size. `gemma4` ships as E2B, E4B and 12B; `granite4` as 3B
-and 8B; `glm-5.3` as a 321B Flash and a 753B full model. Seeing the same name in two
+A family is a recipe, not a size. `gemma4` ships in five sizes from E2B to 31B;
+`granite4` runs from 350M up to a 32B-A9B hybrid; `glm-5.3` as a 321B Flash and a
+753B full model. Seeing the same name in two
 tiers below is not a mistake — it is the same training approach at a different scale, and
 the sizes behave very differently.
 
@@ -190,7 +192,7 @@ Not useful for: multi-step reasoning, agentic coding.
 | Model | Size | Notes |
 | --- | --- | --- |
 | `qwen3.8:27b` | 27B dense | 256K context, vision, tools, thinking. ~15 GB at Q4. |
-| `ornith-1.5:35b-a3b` | 36B-A3B | Sparse, so it runs at roughly the speed of a 3B model |
+| `ornith-1.5:35b` | 35B-A3B | Sparse, so it runs at roughly the speed of a 3B model |
 | `qwen3-coder:30b` | 30B sparse | Code and agentic software work |
 
 This tier is the sweet spot for one developer. A single 24 GB card runs everything here
@@ -205,8 +207,9 @@ years ago. It fits on a single consumer card.
 | Model | Total / active | Q4 weights | Fits on |
 | --- | --- | --- | --- |
 | `kimi-linear:48b-a3b` | 48B-A3B | ~27 GB | One 32 GB card |
-| `nemotron-3-super` | 124B-A12B | ~68 GB | One 96 GB card |
-| `qwen3.8-flash-next` | 180B sparse | ~99 GB | Two 96 GB cards, or one 128 GB unified machine |
+| `gpt-oss:120b` | 117B-A5B | ~61 GB, ships 4-bit natively | One 96 GB card |
+| `nemotron-3-super` | 120B-A12B | ~66 GB | One 96 GB card |
+| `qwen3.8-flash-next` | 180B-A6B | ~99 GB | Two 96 GB cards, or one 128 GB unified machine |
 
 This is where open models start being straightforwardly competitive with hosted services
 for most work.

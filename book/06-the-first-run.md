@@ -84,6 +84,9 @@ sudo ufw allow in on docker0 to any port 11434
 sudo ufw deny 11434
 ```
 
+Note that ufw is inactive by default on Ubuntu — check with `sudo ufw status`, and if
+you enable it, allow SSH first on a remote machine.
+
 If you are not using Docker, omit `OLLAMA_HOST` entirely — the default binds to
 localhost only.
 :::
@@ -156,6 +159,12 @@ Now a request like *"find three suppliers for this part, sort them by price, and
 justify the ranking"* will cause the model to search, read the results, and answer with
 sources.
 
+Tools beyond search attach the same way through **MCP** — the Model Context Protocol,
+now the standard socket between a model and its tools. Open WebUI speaks it natively,
+and published MCP servers — filesystems, databases, browsers, ticket systems — plug
+into this setup unchanged. Each one you add is also new attack surface; the warning
+below applies to all of them.
+
 ::: danger Prompt injection
 The moment a model reads web pages, the contents of those pages become instructions it
 may follow. A page can contain text along the lines of *"ignore your previous
@@ -171,19 +180,19 @@ shell or filesystem tools. See [Chapter 12](/book/12-security).
 Pull a sparse model and run the same prompt on both:
 
 ```bash
-ollama pull ornith-1.5:35b-a3b
+ollama pull ornith-1.5:35b
 ```
 
 | Model | `ollama ps` | Speed | Behaviour |
 | --- | --- | --- | --- |
 | `nemotron-3-nano:4b` | `100% GPU` | 40–60 tok/s | Searches and answers, but reasoning over results is shallow and it loses the thread across steps |
-| `ornith-1.5:35b-a3b` | CPU/GPU split | 8–15 tok/s | Chains tool calls correctly and holds a plan together |
+| `ornith-1.5:35b` | CPU/GPU split | 8–15 tok/s | Chains tool calls correctly and holds a plan together |
 
 That difference is the practical meaning of model size. On 4 GB of VRAM you choose one
 or the other; you do not get both. [Chapter 8](/book/08-the-model-landscape) shows what
 hardware removes the choice.
 
-The second model only manages those speeds because it is sparse — 3B of its 36B
+The second model only manages those speeds because it is sparse — 3B of its 35B
 parameters are active per token ([Chapter 3](/book/03-dense-and-sparse)). A dense model
 of the same footprint, run mostly from system RAM, would be several times slower.
 
@@ -219,13 +228,19 @@ prompt. Feed it something large instead:
 cat some-long-document.txt | ollama run --verbose nemotron-3-nano:4b "Summarise this."
 ```
 
+One catch: the context window must be at least as large as the document, or Ollama
+silently truncates the input and you measure a fraction of it. The 8,192 configured in
+Step 1 is too small for a 30,000-token test — raise `OLLAMA_CONTEXT_LENGTH` for the
+measurement (and watch memory: [Chapter 2](/book/02-size-and-memory) says what the
+larger cache costs), then put it back.
+
 Now `prompt eval rate` is meaningful, and the gap between the two rates is the
 prefill-versus-decode split from [Chapter 4](/book/04-the-gpu) made concrete.
 
 ### Testing a sparse model
 
 This matters most for sparse models, where [Chapter 3](/book/03-dense-and-sparse) says
-the arithmetic gives only a range. Run the same measurement on `ornith-1.5:35b-a3b` and
+the arithmetic gives only a range. Run the same measurement on `ornith-1.5:35b` and
 see where inside that range your hardware actually lands.
 
 ### Going further

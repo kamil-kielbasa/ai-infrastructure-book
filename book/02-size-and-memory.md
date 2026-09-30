@@ -110,6 +110,15 @@ four times faster.
 | Q3_K_M | ~3.5 | ~0.45 | Squeezing. Quality degradation becomes visible. |
 | Q2_K | ~2.5 | ~0.35 | Last resort. Frequently incoherent. |
 
+Three newer formats are worth recognising alongside these. **FP8** — one byte per
+parameter — is how several large models now ship, and recent GPUs run it natively.
+**MXFP4 and NVFP4** are four-bit floating-point formats with hardware support on the
+newest cards; some models are now *trained* directly in them (OpenAI's gpt-oss ships
+this way), which removes the conversion loss entirely. And below four bits,
+**calibrated quantization** — IQ-format and "dynamic" GGUF files, tuned per layer
+against sample text — has softened the cliff described next: still degraded, no longer
+incoherent.
+
 ### The rule that matters
 
 Quality degrades gently from 16 bits down to about 4, then falls off a cliff.

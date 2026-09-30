@@ -55,7 +55,7 @@ the largest model that fits under it.
 
 From the same chapter: tokens per second ≈ bandwidth ÷ model size.
 
-$$\frac{190\ \text{GB/s}}{2.4\ \text{GB}} \approx 79\ \text{tokens/s}$$
+$$\frac{190\ \text{GB/s}}{2.2\ \text{GB}} \approx 86\ \text{tokens/s}$$
 
 At the realistic 50–70% of theory, expect **40–60 tokens per second** — comfortably
 faster than anyone reads.
@@ -73,6 +73,14 @@ occupies around 17 GB of RAM but only touches a few gigabytes per token.
 The result is single-digit tokens per second. Slow — roughly reading speed — but a
 30B-class model is a categorically different tool from a 4B one. It chains tool calls,
 sustains a plan across steps, and recovers from its own errors.
+
+*How* the model is split matters nearly as much as that it is split. The right
+arrangement keeps what is read on every token — the attention layers, router and KV
+cache, all small — in VRAM, and moves only the expert blocks to system RAM. llama.cpp
+exposes this directly (`--n-cpu-moe`, alongside `-ngl 999` to keep everything else on
+the card); Ollama does not yet, and its automatic layer split leaves a real share of
+the achievable speed on the table. If the sparse-model-from-RAM trick matters to you,
+it is worth running llama.cpp's own server for it.
 
 ## The summary
 

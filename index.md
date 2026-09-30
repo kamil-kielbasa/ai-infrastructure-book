@@ -23,7 +23,7 @@ features:
     link: /book/05-the-reference-machine
     linkText: 3 chapters
   - title: Part III — The landscape
-    details: Every model from 1B to 1T, the hardware each one needs, and how open models compare to hosted ones.
+    details: Every model from 1B to 2.4T, the hardware each one needs, and how open models compare to hosted ones.
     link: /book/08-the-model-landscape
     linkText: 2 chapters
   - title: Part IV — Building infrastructure

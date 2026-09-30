@@ -23,6 +23,15 @@ Everything an agent reads is untrusted input, and unlike SQL injection there is 
 escaping function that makes it safe. The model is doing exactly what it was built to do:
 follow instructions written in ordinary language.
 
+### The lethal trifecta
+
+The dangerous combination has a name worth memorising. An agent with access to
+**private data**, exposure to **untrusted content**, and a way to **communicate
+out** can be made to steal what it can see — no software vulnerability required,
+just planted text. Any two of the three are manageable. Designing an agent means
+choosing which of the three to drop: deny the tool, wall off the data, or cut the
+outbound channel.
+
 ### What actually helps
 
 No single measure fixes this. These reduce the damage:
@@ -41,10 +50,29 @@ deploying. The agent proposes; a person approves.
 **Watch the outputs, not just the inputs.** Data exfiltration through a model often looks
 like a perfectly normal answer that happens to contain a secret. Log what goes out.
 
+**Contain where the agent runs.** A container limits what an accident touches; it is not
+a boundary against a determined escape, because containers share the host kernel. For
+agents that run untrusted code, prefer a micro-VM sandbox (gVisor, Firecracker) to a
+bare shell on your workstation.
+
 ::: danger Before you connect an agent to anything that matters
 Assume that any document it reads may be written by someone who wants to influence it,
 and design as if that has already happened.
 :::
+
+## The model file itself
+
+Weights are input to a program, and parsers have bugs. Three habits cost nothing:
+
+- **Prefer safetensors and GGUF** over Python-pickle formats (`.pt`, `.bin`), which can
+  execute code on load.
+- **Pull from the publisher's own account** or the official registry, not a stranger's
+  re-upload of the same name.
+- **Patch the runtime.** Inference servers are network services with a growing CVE
+  history — including an out-of-bounds read in Ollama's GGUF parser (CVE-2026-7482,
+  fixed in 0.17.1) that leaked memory from servers exposed to the network. The
+  binding advice in [Chapter 6](/book/06-the-first-run) is part of the same story:
+  an unauthenticated endpoint on `0.0.0.0` is a finding, not a convenience.
 
 ## Guardrails
 
@@ -83,12 +111,3 @@ model.
 research-only model produces a research-only model, however much work you added.
 
 Check both before anything reaches a product.
-
-## A suggested order
-
-1. Work through [Chapter 6](/book/06-the-first-run), including the model comparison at
-   the end.
-2. Connect a model to your editor ([Chapter 9](/book/09-coding-and-editors)) and try real
-   work. Note where it falls short.
-3. Read about prompt injection again before giving any agent access to anything that
-   matters.

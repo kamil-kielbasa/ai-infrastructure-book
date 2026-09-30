@@ -71,7 +71,7 @@ exactly the wrong trade.
 | --- | --- | --- |
 | DDR4 / DDR5 | 50–100 GB/s | System RAM |
 | GDDR6 | 200–700 GB/s | Mid-range and laptop GPUs |
-| LPDDR5X (unified) | 270–1,200 GB/s | Apple Silicon, NVIDIA GB10 |
+| LPDDR5X (unified) | 250–1,200 GB/s | Apple Silicon, NVIDIA GB10, AMD Strix Halo |
 | GDDR7 | 1,000–1,800 GB/s | Current high-end GPUs |
 | HBM2e / HBM3 / HBM3e | 2,000–4,800 GB/s | Datacenter accelerators |
 
@@ -131,7 +131,7 @@ multiplications that neural networks consist of. Their generation matters: Amper
 Hopper and Blackwell each brought substantial gains.
 
 ::: warning Two different numbers, confusingly similar names
-**Compute** (TFLOPS) is a *speed*. Bigger is faster. An H200 is around 990 TFLOPS, a
+**Compute** (TFLOPS) is a *speed*. Bigger is faster. An H200 is around 835 TFLOPS, a
 high-end workstation card around 250.
 
 **Compute capability** (8.6, 9.0, 12.0) is a *version number* for the card's feature set.
@@ -151,8 +151,8 @@ and halve any number carrying an asterisk.
 
 ## Unified memory
 
-Apple Silicon and NVIDIA's GB10 use **unified memory**: one pool shared by CPU and GPU
-instead of two separate pools with a bus between them.
+Apple Silicon, NVIDIA's GB10 and AMD's Strix Halo use **unified memory**: one pool
+shared by CPU and GPU instead of two separate pools with a bus between them.
 
 The advantage is capacity. A workstation built this way can offer hundreds of gigabytes
 to the GPU, far beyond what any discrete card provides, and at a fraction of the price
